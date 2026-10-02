@@ -1,0 +1,86 @@
+libSDL3.so -- Linux arm64 (linux-arm64)
+================================================================================
+This binary was BUILT HERE, from the SDL source snapshot vendored in this
+repository, by:
+
+    sdl3-native-tools/linux/build.sh arm64   (-> container-build.sh)
+
+inside a digest-pinned manylinux container with the network DISABLED. Nothing
+was downloaded; the build reaches nothing outside this repository. Re-running
+that script reproduces this binary (linux-x64 was rebuilt from scratch and came
+out byte-identical; see sdl3-native-tools/BUILD-PROVENANCE.txt).
+
+SDL version       : 3.5.0 (development snapshot - NOT a tagged SDL release)
+SDL commit        : a8591d943b7079b17fdd018dc04ec9c71dc94ae4 ("Fix #15985", 2026-07-19)
+                    the same commit ppy/SDL3-CS 2026.722.0's bindings and
+                    binaries were made from
+Source            : sdl3-native-tools/SDL/ (unmodified; see SDL/UPSTREAM.txt)
+Patches applied   : none
+Vendored headers  : linux/vendored-headers/libdecor-0/libdecor-0.pc (0.2.2)
+                    linux/vendored-headers/libdecor-0/libdecor.h sha256 bb85696fea29eea7f7c78cdddacbc02e6234a0ac94f5d331e7f36eedb5f52cfa
+libdecor          : SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_LIBDECOR "libdecor-0.so.0"
+                    SDL_LIBDECOR_VERSION_MAJOR 0
+                    SDL_LIBDECOR_VERSION_MINOR 2
+                    SDL_LIBDECOR_VERSION_PATCH 2
+SDL_GetRevision() : SDL-3.5.0-a8591d9
+
+Built             : 2026-10-01 22:50:21 UTC
+Build duration    : 411s (wall clock inside the container)
+Build host        : Dell Precision 7770 laptop, LMDE 7, x86_64, podman 5.4.2, under qemu-user emulation
+Network           : DISABLED during this build (interfaces: lo)
+Derived image     : codebrix-sdl3-build-aarch64
+Base image        : quay.io/pypa/manylinux_2_28_aarch64:2026.07.19-1
+                    @sha256:162c81dfd3efc710732a571717d3c916a6945ebf279e879ddee3243af96fe46f
+Container OS      : AlmaLinux 8.10 (Cerulean Leopard)
+Toolchain         : cc (GCC) 14.2.1 20250110 (Red Hat 14.2.1-11)
+                    GNU ld version 2.41-4.el8_10.1
+                    cmake version 4.4.3 (pinned 4.4.3)
+                    ninja 1.13.2.git.kitware.jobserver-pipe-1 (pinned 1.13.2)
+CMake options     : -G Ninja -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF -DSDL_INSTALL=OFF -DSDL_DEPS_SHARED=ON -DSDL_RPATH=OFF
+                    -DSDL_REVISION=SDL-3.5.0-a8591d9
+                    arch options: -DDECOR_0_LIB=libdecor-0.so.0
+                    (-DDECOR_0_LIB=libdecor-0.so.0: the soname SDL dlopen()s for
+                    libdecor; the vendored header is compiled against, no
+                    libdecor library is linked)
+                    CMAKE_C_FLAGS="-g -ffile-prefix-map=/tmp/codebrix-sdl3-src=SDL -ffile-prefix-map=/tmp/codebrix-sdl3-build=build -ffile-prefix-map=/work=sdl3-native-tools"
+                    CMAKE_SHARED_LINKER_FLAGS="-Wl,--build-id=sha1"
+                    then strip --strip-unneeded
+
+Backends enabled (SDL's CMake summary; "(dynamic)" = dlopen()ed at run time):
+                    Video drivers: dummy kmsdrm(dynamic) offscreen wayland(dynamic) x11(dynamic)
+                    X11 libraries: xcursor xdbe xfixes xinput2 xrandr xscrnsaver xshape xsync xtest
+                    Render drivers: gpu ogl ogl_es ogl_es2 vulkan
+                    GPU drivers: openxr vulkan
+                    Audio drivers: alsa(dynamic) disk dummy jack(dynamic) pulseaudio(dynamic)
+                    Joystick drivers: hidapi linux virtual
+                    Camera drivers: dummy v4l2
+Drivers reported at run time by the smoke test:
+                    video drivers    : wayland x11 kmsdrm offscreen dummy evdev
+                    audio drivers    : pulseaudio alsa jack disk dummy
+                    render drivers   : opengl opengles2 opengles vulkan gpu software
+
+Architecture      : ELF64, AArch64
+SONAME            : libSDL3.so.0   (shipped under the unversioned name libSDL3.so,
+                    which DllImport("SDL3") probes)
+Dynamic deps      : libc.so.6 libdl.so.2 libm.so.6 libpthread.so.0 
+glibc floor       : 2.27 (allowed <= 2.28)
+Build-id (sha1)   : 8e0ff562538a3f04b099d941e9edf13b69606509
+
+Output SHA-256    : 7abcb8d4f137ebce7495162db2c21314c05ecb583a496b5b4decf9ce5f504f31
+Output size       : 3916936 bytes
+Unstripped SHA-256: 3b6b38618af06ba472d0ea981596c4f480e6bef77547d627b985d57b9cfdae6a
+Unstripped size   : 25253328 bytes
+                    (stored in sdl3-native-tools/unstripped/linux-arm64/libSDL3.so)
+
+Gate              : ELF class/machine, SONAME, no RPATH/RUNPATH/TEXTREL, required
+                    exports, system-only NEEDED, ldd -r clean, glibc floor,
+                    matching build-ids, dlopen smoke test (SDL_GetVersion ==
+                    3005000, dummy-driver Init, window + renderer, draw and
+                    read-back, Quit) - ALL PASSED (the smoke test executed
+                    the library under qemu-user emulation)
+
+Vendored on       : 2026-10-01
+
+LICENSE-SDL3.txt beside this file is SDL's LICENSE.txt, verbatim. SDL is
+licensed under the zlib license, Copyright (C) 1997-2026 Sam Lantinga. See
+THIRD-PARTY-NOTICES.txt in the repository root.

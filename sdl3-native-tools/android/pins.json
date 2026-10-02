@@ -1,0 +1,55 @@
+{
+  "ndk": "30.0.16248370",
+  "api": 33,
+  "cmake_minimum": "3.16",
+  "ninja_minimum": "1.10",
+  "source_commit": "a8591d943b7079b17fdd018dc04ec9c71dc94ae4",
+  "sdl_version": "3.5.0",
+  "sdl_version_number": 3005000,
+  "sdl_revision": "SDL-3.5.0-a8591d9",
+  "abis": {
+    "arm64": "arm64-v8a",
+    "x64": "x86_64"
+  },
+  "allowed_needed": [
+    "libc.so",
+    "libm.so",
+    "libdl.so",
+    "liblog.so",
+    "libandroid.so",
+    "libOpenSLES.so",
+    "libGLESv1_CM.so",
+    "libGLESv2.so",
+    "libEGL.so",
+    "libaaudio.so",
+    "libvulkan.so",
+    "libcamera2ndk.so",
+    "libmediandk.so",
+    "libnativewindow.so"
+  ],
+  "required_exports": [
+    "SDL_Init",
+    "SDL_Quit",
+    "SDL_GetVersion",
+    "SDL_GetRevision",
+    "SDL_GetError",
+    "SDL_SetHint",
+    "SDL_CreateWindow",
+    "SDL_DestroyWindow",
+    "SDL_CreateRenderer",
+    "SDL_DestroyRenderer",
+    "SDL_PollEvent",
+    "SDL_GetCurrentVideoDriver",
+    "SDL_GetNumVideoDrivers",
+    "SDL_GetVideoDriver",
+    "SDL_GetNumAudioDrivers",
+    "SDL_GetAudioDriver",
+    "JNI_OnLoad"
+  ],
+  "jar": {
+    "android_platform": "android-37.2",
+    "javac_release": 11,
+    "name": "SDL3AndroidBridge.jar",
+    "jdk_major": 25
+  }
+}

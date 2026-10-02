@@ -1,0 +1,698 @@
+================================================================================
+sdl3-native-tools/BUILD-PROVENANCE.txt
+what was actually built (or adopted), when, by what, and with what result
+================================================================================
+
+WHY THIS FILE EXISTS
+--------------------------------------------------------------------------------
+A binary in a package is anonymous. This file is how anyone later can tell which
+native library came from which source, which toolchain and which build machine -
+without which "rebuild it and see if it matches" is not a question that can even
+be asked. Every time a binary is adopted into ../native_libraries/<rid>/, its
+section here is updated from that build's output/<rid>/BUILD-INFO.txt (and the
+<file>.provenance.txt beside the binary is written from the same values).
+
+Common to every entry below
+--------------------------------------------------------------------------------
+  Source          : sdl3-native-tools/SDL/ - vendored, unmodified upstream snapshot
+  SDL commit      : a8591d943b7079b17fdd018dc04ec9c71dc94ae4 ("Fix #15985",
+                    2026-07-19) - the commit ppy/SDL3-CS 2026.722.0 pins
+  SDL version     : 3.5.0 (version header; a development snapshot, NOT a tagged
+                    release - see SDL/UPSTREAM.txt)
+  SDL_GetVersion  : 3005000   SDL_GetRevision: SDL-3.5.0-a8591d9
+  Licence         : zlib (SDL/LICENSE.txt, shipped as LICENSE-SDL3.txt beside every
+                    binary; see ../THIRD-PARTY-NOTICES.txt)
+  Patches applied : NONE. The vendored source is unmodified upstream.
+  Shipped names   : libSDL3.so / SDL3.dll / libSDL3.dylib - unversioned, because
+                    DllImport("SDL3") probes exactly those names
+
+Linux (the three linux-* entries)
+--------------------------------------------------------------------------------
+  Route           : linux/build.sh <arch> -> container-build.sh, inside
+                    codebrix-sdl3-build-<arch> (Containerfile.<arch>: the
+                    digest-pinned manylinux base + cmake 4.4.3 + ninja 1.13.2 +
+                    SDL's backend -devel headers), run with --network none
+  cmake options   : -G Ninja -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON
+                    -DSDL_STATIC=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF
+                    -DSDL_EXAMPLES=OFF -DSDL_INSTALL=OFF -DSDL_DEPS_SHARED=ON
+                    -DSDL_RPATH=OFF -DSDL_REVISION=SDL-3.5.0-a8591d9
+                    + per-architecture SDL_CMAKE_OPTIONS_<ARCH>: x64 and arm64
+                    -DDECOR_0_LIB=libdecor-0.so.0 (+ the vendored libdecor
+                    pkg-config folder on PKG_CONFIG_PATH); riscv64
+                    -DSDL_X11_XSCRNSAVER=OFF
+                    CMAKE_C_FLAGS="-g -ffile-prefix-map=<src>=SDL
+                    -ffile-prefix-map=<build>=build -ffile-prefix-map=/work=
+                    sdl3-native-tools"; linker -Wl,--build-id=sha1;
+                    then strip --strip-unneeded
+                    (ppy's CI for the same commit: -GNinja, Release,
+                    SDL_SHARED=ON, SDL_STATIC=OFF on ubuntu-22.04)
+  Backends        : every windowing / audio / input library is dlopen()ed at run
+                    time (SDL_DEPS_SHARED=ON); the build only needs its headers.
+                    WHICH backends are compiled in therefore depends on the
+                    headers each image's repositories carry, and differs by RID -
+                    recorded under each RID below, never silent.
+  Vendored header : linux/vendored-headers/libdecor-0/libdecor.h - libdecor 0.2.2,
+                    MIT, unmodified, sha256 bb85696fea29eea7f7c78cdddacbc02e
+                    6234a0ac94f5d331e7f36eedb5f52cfa (see its UPSTREAM.txt), with
+                    a pkg-config stub; used by linux-x64 and linux-arm64 only,
+                    whose AlmaLinux 8 images have no libdecor-devel. Header only:
+                    libdecor is dlopen()ed, never linked.
+  Reproducibility : linux-x64 (with the vendored header) was built from scratch
+                    THREE times on 2026-10-01 (runs A, B, C; C with the final
+                    scripts): stripped and unstripped files byte-identical every
+                    time. arm64 and riscv64 were built once each (emulated).
+  Gate            : linux/README.txt, THE VERIFICATION GATE (9 checks: ELF,
+                    SONAME, RPATH/TEXTREL, exports, NEEDED + ldd -r, glibc
+                    floor, build-id, ../smoke-test.c against the stripped file,
+                    must-have backend sonames)
+
+BACKEND DIFFERENCES BETWEEN THE LINUX RIDS (recorded, rulings of 2026-10-01)
+--------------------------------------------------------------------------------
+  * libdecor (Wayland client-side decorations): ON for all three Linux RIDs -
+    x64/arm64 through the vendored header (ruling: GO on vendoring it), riscv64
+    from its image's libdecor-devel 0.2.2.
+  * PipeWire: ON for riscv64 only. x64/arm64 stay OFF by ruling: EL8's
+    pipewire-devel 0.3.6 is older than SDL's >= 0.3.44 floor, and audio still
+    reaches PipeWire through its PulseAudio layer (pipewire-pulse).
+  * sndio: OFF everywhere (not packaged in any image).
+  * liburing: ON for riscv64 only (EL8's 1.0.7 has no liburing-ffi); SDL's
+    async I/O otherwise uses its thread pool.
+  * XScreenSaver extension: OFF for riscv64 only (RHEL 10 has no
+    libXScrnSaver-devel); SDL_DisableScreenSaver() there uses D-Bus.
+  ppy's ubuntu-22.04 linux-x64 build of the same commit has libdecor, PipeWire
+  and sndio.
+
+Android (the two android-* entries and the jar)
+--------------------------------------------------------------------------------
+  Route           : android/build.py (libraries) and android/build-jar.sh (jar).
+                    Libraries built in the codebrix-sdl3-build-x86_64 tool image
+                    with --network none and the NDK mounted read-only (the host has
+                    no ninja); the jar directly on the host (javac + jar only).
+  CMake options   : -G Ninja -DCMAKE_TOOLCHAIN_FILE=<NDK>/build/cmake/android.toolchain.cmake
+                    -DANDROID_ABI=<abi> -DANDROID_PLATFORM=33
+                    -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+                    -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF
+                    -DSDL_EXAMPLES=OFF -DSDL_INSTALL=OFF -DSDL_ANDROID_JAR=OFF
+                    -DSDL_REVISION=SDL-3.5.0-a8591d9
+                    C/C++ flags "-g" + -ffile-prefix-map (scratch source, build, NDK)
+                    + -fdebug-compilation-dir=build; link flags
+                    -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
+                    -Wl,--build-id=sha1; then llvm-strip --strip-unneeded
+  API floor       : 33 (CodeBrix's Android floor), NOT ppy's/SDL Gradle's 21
+  Only warning    : SDL_androidsensor.c:140 ASensorManager_getInstance deprecated
+                    (Android 26) - upstream code, both ABIs, harmless
+
+Windows (the two win-* entries)
+--------------------------------------------------------------------------------
+  Route           : ADOPTED, not built here. Both DLLs are the ppy.SDL3-CS
+                    2026.722.0 NuGet package's runtimes/win-*/native/SDL3.dll,
+                    taken from the local NuGet cache (Jeremy's ruling,
+                    2026-10-01). ppy built them from this same SDL commit.
+  Package         : https://www.nuget.org/api/v2/package/ppy.SDL3-CS/2026.722.0
+                    sha512 zAA8c/eEO9uPds8P6CgrASjH6LZwynHGWb/URdrmONyWE5LjqQ/E7f7WriUqVasHLnY6PTeckM27yG6BZrojZA==
+                    (the cache's .nupkg.sha512, re-computed from the .nupkg:
+                    identical); sha256 3ed618f843e5dec89c591d22261b40ca29de8cfbcaf79c6a609c0d74d8e6ca59
+  Identity check  : for each RID the cache file, the ZIP entry read out of the
+                    .nupkg and ppy's git tag 2026.722.0 (commit 7f836c9,
+                    native/<rid>/SDL3.dll) have the same sha256
+  ppy's recipe    : windows-latest runner, Visual Studio generator,
+                    -A x64|ARM64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+                    -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF,
+                    after a sed that disables SDL's <gameinput.h> detection
+  Rebuild         : windows/build-win-x64.ps1, windows/build-win-arm64.ps1
+                    (-Route Native | CrossFromX64) - written 2026-10-01, UNRUN.
+                    They reproduce ppy's recipe from SDL/ (GameInput off via a
+                    pre-seeded -DHAVE_GAMEINPUT_H=OFF, no patch) and add a .pdb.
+                    See windows/README.txt.
+  Verified        : on Linux only (no Windows machine involved): PE headers,
+                    import and export tables read with a python3 standard-
+                    library parser, x64 cross-checked with GNU objdump -p.
+                    NOT executed - the LoadLibrary smoke test runs only as part
+                    of the rebuild scripts' gate.
+  Licences        : binary zlib (SDL); ppy's packaging MIT (Copyright (c) 2024
+                    ppy Pty Ltd) - no ppy code is in the DLLs
+
+macOS (the two osx-* entries)
+--------------------------------------------------------------------------------
+  Route           : ADOPTED, not built here. Both dylibs are the ppy.SDL3-CS
+                    2026.722.0 NuGet package's runtimes/osx-*/native/
+                    libSDL3.dylib, taken from the local NuGet cache (Jeremy's
+                    ruling, 2026-10-01). ppy built them from this same SDL
+                    commit. Package URL, sha512 and the cache / nupkg-entry /
+                    git-tag identity check: as for Windows above.
+  ppy's recipe    : macos-latest runner (Apple Silicon - so osx-x64 was a cross
+                    build), default Makefile generator,
+                    -DCMAKE_OSX_ARCHITECTURES=x86_64|arm64
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=10.14|11.0
+                    -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF
+  Rebuild         : macos/build-osx-arm64.sh, macos/build-osx-x64.sh - written
+                    2026-10-01, UNRUN. Same floors as ppy (11.0 / 10.14; the
+                    choice and why it is not llama's single 13.3 are in
+                    macos/README.txt), cmake + ninja, strip -x + ad-hoc sign,
+                    unstripped twin + dSYM kept. See macos/README.txt.
+  Verified        : on Linux only (no Mac involved): Mach-O load commands and
+                    symbol tables read with a python3 standard-library parser;
+                    `file`. NOT executed; codesign/otool/lipo not available.
+  Licences        : binary zlib (SDL); ppy's packaging MIT - no ppy code is in
+                    the dylibs
+
+================================================================================
+linux-x64                                                         BUILT + PASSED
+================================================================================
+Built            : 2026-10-01 22:57:26 UTC
+Built by         : linux/build.sh x64 -> container-build.sh
+Build host       : Dell Precision 7770, LMDE 7, x86_64, podman 5.4.2 -
+                   the x86_64 laptop itself (native)
+Duration         : 24s (wall clock inside the container)
+Network          : DISABLED during this build (interfaces: lo)
+Derived image    : codebrix-sdl3-build-x86_64
+Base image       : quay.io/pypa/manylinux_2_28_x86_64@sha256:a61875a2f84cab7df8de222ff12cabc08ff86eb4ad402ac90ba7bdaed9600cca
+Container OS     : AlmaLinux 8.10 (Cerulean Leopard), ldd (GNU libc) 2.28
+Compiler         : cc (GCC) 14.2.1 20250110 (Red Hat 14.2.1-11)
+Linker           : GNU ld version 2.41-4.el8_10.1
+cmake / ninja    : cmake version 4.4.3 (pinned 4.4.3) / 1.13.2.git.kitware.jobserver-pipe-1 (pinned 1.13.2)
+arch options     : -DDECOR_0_LIB=libdecor-0.so.0
+
+-devel packages in the image (rpm --whatprovides; "no package provides" = absent):
+                   libX11-devel                                     required  libX11-devel-1.6.8-9.el8_10
+                   libXext-devel                                    required  libXext-devel-1.3.4-1.el8
+                   libXrandr-devel                                  required  libXrandr-devel-1.5.2-1.el8
+                   libXcursor-devel                                 required  libXcursor-devel-1.1.15-3.el8
+                   libXi-devel                                      required  libXi-devel-1.7.10-1.el8
+                   libXfixes-devel                                  required  libXfixes-devel-5.0.3-7.el8
+                   libxkbcommon-devel                               required  libxkbcommon-devel-0.9.1-1.el8
+                   wayland-devel                                    required  wayland-devel-1.21.0-1.el8
+                   mesa-libGL-devel                                 required  mesa-libGL-devel-23.1.4-4.el8_10.alma.1
+                   mesa-libEGL-devel                                required  mesa-libEGL-devel-23.1.4-4.el8_10.alma.1
+                   alsa-lib-devel                                   required  alsa-lib-devel-1.2.10-2.el8
+                   pulseaudio-libs-devel                            required  pulseaudio-libs-devel-14.0-4.el8
+                   dbus-devel                                       required  dbus-devel-1.12.8-28.el8_10
+                   systemd-devel                                    required  systemd-devel-239-82.el8_10.19
+                   libXScrnSaver-devel                              optional  libXScrnSaver-devel-1.2.3-1.el8
+                   libXtst-devel                                    optional  libXtst-devel-1.2.3-7.el8
+                   wayland-protocols-devel                          optional  wayland-protocols-devel-1.25-1.el8
+                   libdecor-devel                                   optional  no package provides libdecor-devel
+                   mesa-libgbm-devel                                optional  mesa-libgbm-devel-23.1.4-4.el8_10.alma.1
+                   libdrm-devel                                     optional  libdrm-devel-2.4.115-2.el8
+                   pipewire-devel                                   optional  pipewire-devel-0.3.6-1.el8
+                   ibus-devel                                       optional  ibus-devel-1.5.19-15.el8_10
+                   libusb1-devel                                    optional  libusbx-devel-1.0.30-1.el8_10
+                   libusbx-devel                                    optional  libusbx-devel-1.0.30-1.el8_10
+                   jack-audio-connection-kit-devel                  optional  jack-audio-connection-kit-devel-1.9.14-4.el8
+                   pipewire-jack-audio-connection-kit-devel         optional  no package provides pipewire-jack-audio-connection-kit-devel
+                   sndio-devel                                      optional  no package provides sndio-devel
+                   fribidi-devel                                    optional  fribidi-devel-1.0.4-9.el8
+                   libthai-devel                                    optional  libthai-devel-0.1.27-2.el8
+                   liburing-devel                                   optional  liburing-devel-1.0.7-3.el8
+
+Enabled backends (SDL's CMake summary; "(dynamic)" = dlopen()ed at run time):
+                   Video drivers: dummy kmsdrm(dynamic) offscreen wayland(dynamic) x11(dynamic)
+                   X11 libraries: xcursor xdbe xfixes xinput2 xrandr xscrnsaver xshape xsync xtest
+                   Render drivers: gpu ogl ogl_es ogl_es2 vulkan
+                   GPU drivers: openxr vulkan
+                   Audio drivers: alsa(dynamic) disk dummy jack(dynamic) pulseaudio(dynamic)
+                   Joystick drivers: hidapi linux virtual
+                   Camera drivers: dummy v4l2
+Run-time drivers (smoke test):
+                   video drivers    : wayland x11 kmsdrm offscreen dummy evdev
+                   audio drivers    : pulseaudio alsa jack disk dummy
+                   render drivers   : opengl opengles2 opengles vulkan gpu software
+libdecor         : ON via the VENDORED header linux/vendored-headers/libdecor-0/
+                   (libdecor 0.2.2, MIT; AlmaLinux 8 has no libdecor-devel);
+                   SDL_LIBDECOR_VERSION 0.2.2, dlopen()s libdecor-0.so.0; no
+                   libdecor library linked (not in NEEDED)
+Not compiled in  : PipeWire (EL8 pipewire-devel 0.3.6 < SDL's >= 0.3.44; audio
+                   reaches PipeWire through pipewire-pulse), sndio (not
+                   packaged), liburing (EL8 1.0.7 has no liburing-ffi).
+
+File             : libSDL3.so       SONAME libSDL3.so.0
+Size (stripped)  : 4,142,376 bytes
+Size (unstripped): 25,396,576 bytes
+SHA256           : 070bcdf53ee186bedf8e941c72e84295d3f8b7523ad5460b0a5dc012768a96da
+SHA256 unstripped: 06c8d71ca86f2a720ba83f221de05444f0e9bfd894cb7fcb502ed4031f6cf3a1
+Build-id (sha1)  : b98b1577d53a87c9867e387c5ef1fdd2cf649dca
+ELF              : ELF64, Advanced Micro Devices X86-64
+glibc floor      : 2.27 (allowed <= 2.28)
+Dynamic deps     : libc.so.6 libdl.so.2 libm.so.6 libpthread.so.0
+Exports          : 1302  (symbol version(s): SDL3_0.0.0)
+Gate             : ELF class/machine ok, SONAME ok, no RPATH/RUNPATH/TEXTREL,
+                   16/16 required exports, NEEDED system-only, ldd -r clean,
+                   glibc floor ok, build-ids match, smoke test PASSED,
+                   must-have backend sonames present (check 9)
+                   (SDL_GetVersion 3005000, revision SDL-3.5.0-a8591d9, dummy
+                   video Init, window + software renderer, pixel read-back
+                   (18,52,86), Quit)
+First-run fixes  : two, both in the GATE (container-build.sh), neither in the
+                   build: (1) `readelf -n` exits 1 on these files ("Gap in build
+                   notes" - Red Hat annobin notes), which killed the build-id read
+                   under set -e; now tolerated. (2) nm prints versioned names
+                   (SDL_Init@@SDL3_0.0.0), so every required export looked
+                   missing; the @-suffix is now cut before comparing.
+Reproducibility  : this build (with the vendored libdecor header) was made three
+                   times from scratch on 2026-10-01 (runs A, B, C, 22:48-22:57
+                   UTC; C with the final scripts): stripped AND unstripped
+                   byte-identical every time. (The earlier libdecor-less build,
+                   d56c33fd..., was likewise identical across three runs; it is
+                   superseded.) The entry above is run C.
+Adopted into native_libraries/linux-x64/ : YES, 2026-10-01, with SDL's LICENSE.txt
+                   beside it as LICENSE-SDL3.txt and libSDL3.so.provenance.txt;
+                   unstripped twin in unstripped/linux-x64/
+
+================================================================================
+linux-arm64                                                       BUILT + PASSED
+================================================================================
+Built            : 2026-10-01 22:50:21 UTC
+Built by         : linux/build.sh arm64 -> container-build.sh
+Build host       : Dell Precision 7770, LMDE 7, x86_64, podman 5.4.2 -
+                   the same x86_64 laptop, under qemu-user emulation (qemu 10.0.13)
+Duration         : 411s (wall clock inside the container)
+Network          : DISABLED during this build (interfaces: lo)
+Derived image    : codebrix-sdl3-build-aarch64
+Base image       : quay.io/pypa/manylinux_2_28_aarch64@sha256:162c81dfd3efc710732a571717d3c916a6945ebf279e879ddee3243af96fe46f
+Container OS     : AlmaLinux 8.10 (Cerulean Leopard), ldd (GNU libc) 2.28
+Compiler         : cc (GCC) 14.2.1 20250110 (Red Hat 14.2.1-11)
+Linker           : GNU ld version 2.41-4.el8_10.1
+cmake / ninja    : cmake version 4.4.3 (pinned 4.4.3) / 1.13.2.git.kitware.jobserver-pipe-1 (pinned 1.13.2)
+arch options     : -DDECOR_0_LIB=libdecor-0.so.0
+
+-devel packages in the image (rpm --whatprovides; "no package provides" = absent):
+                   libX11-devel                                     required  libX11-devel-1.6.8-9.el8_10
+                   libXext-devel                                    required  libXext-devel-1.3.4-1.el8
+                   libXrandr-devel                                  required  libXrandr-devel-1.5.2-1.el8
+                   libXcursor-devel                                 required  libXcursor-devel-1.1.15-3.el8
+                   libXi-devel                                      required  libXi-devel-1.7.10-1.el8
+                   libXfixes-devel                                  required  libXfixes-devel-5.0.3-7.el8
+                   libxkbcommon-devel                               required  libxkbcommon-devel-0.9.1-1.el8
+                   wayland-devel                                    required  wayland-devel-1.21.0-1.el8
+                   mesa-libGL-devel                                 required  mesa-libGL-devel-23.1.4-4.el8_10.alma.1
+                   mesa-libEGL-devel                                required  mesa-libEGL-devel-23.1.4-4.el8_10.alma.1
+                   alsa-lib-devel                                   required  alsa-lib-devel-1.2.10-2.el8
+                   pulseaudio-libs-devel                            required  pulseaudio-libs-devel-14.0-4.el8
+                   dbus-devel                                       required  dbus-devel-1.12.8-28.el8_10
+                   systemd-devel                                    required  systemd-devel-239-82.el8_10.19
+                   libXScrnSaver-devel                              optional  libXScrnSaver-devel-1.2.3-1.el8
+                   libXtst-devel                                    optional  libXtst-devel-1.2.3-7.el8
+                   wayland-protocols-devel                          optional  wayland-protocols-devel-1.25-1.el8
+                   libdecor-devel                                   optional  no package provides libdecor-devel
+                   mesa-libgbm-devel                                optional  mesa-libgbm-devel-23.1.4-4.el8_10.alma.1
+                   libdrm-devel                                     optional  libdrm-devel-2.4.115-2.el8
+                   pipewire-devel                                   optional  pipewire-devel-0.3.6-1.el8
+                   ibus-devel                                       optional  ibus-devel-1.5.19-15.el8_10
+                   libusb1-devel                                    optional  libusbx-devel-1.0.30-1.el8_10
+                   libusbx-devel                                    optional  libusbx-devel-1.0.30-1.el8_10
+                   jack-audio-connection-kit-devel                  optional  jack-audio-connection-kit-devel-1.9.14-4.el8
+                   pipewire-jack-audio-connection-kit-devel         optional  no package provides pipewire-jack-audio-connection-kit-devel
+                   sndio-devel                                      optional  no package provides sndio-devel
+                   fribidi-devel                                    optional  fribidi-devel-1.0.4-9.el8
+                   libthai-devel                                    optional  libthai-devel-0.1.27-2.el8
+                   liburing-devel                                   optional  liburing-devel-1.0.7-3.el8
+
+Enabled backends (SDL's CMake summary; "(dynamic)" = dlopen()ed at run time):
+                   Video drivers: dummy kmsdrm(dynamic) offscreen wayland(dynamic) x11(dynamic)
+                   X11 libraries: xcursor xdbe xfixes xinput2 xrandr xscrnsaver xshape xsync xtest
+                   Render drivers: gpu ogl ogl_es ogl_es2 vulkan
+                   GPU drivers: openxr vulkan
+                   Audio drivers: alsa(dynamic) disk dummy jack(dynamic) pulseaudio(dynamic)
+                   Joystick drivers: hidapi linux virtual
+                   Camera drivers: dummy v4l2
+Run-time drivers (smoke test):
+                   video drivers    : wayland x11 kmsdrm offscreen dummy evdev
+                   audio drivers    : pulseaudio alsa jack disk dummy
+                   render drivers   : opengl opengles2 opengles vulkan gpu software
+libdecor         : ON via the vendored header, exactly as linux-x64.
+Not compiled in  : PipeWire, sndio, liburing - the same AlmaLinux 8 limits as
+                   linux-x64.
+
+File             : libSDL3.so       SONAME libSDL3.so.0
+Size (stripped)  : 3,916,936 bytes
+Size (unstripped): 25,253,328 bytes
+SHA256           : 7abcb8d4f137ebce7495162db2c21314c05ecb583a496b5b4decf9ce5f504f31
+SHA256 unstripped: 3b6b38618af06ba472d0ea981596c4f480e6bef77547d627b985d57b9cfdae6a
+Build-id (sha1)  : 8e0ff562538a3f04b099d941e9edf13b69606509
+ELF              : ELF64, AArch64
+glibc floor      : 2.27 (allowed <= 2.28)
+Dynamic deps     : libc.so.6 libdl.so.2 libm.so.6 libpthread.so.0
+Exports          : 1302  (symbol version(s): SDL3_0.0.0)
+Gate             : ELF class/machine ok, SONAME ok, no RPATH/RUNPATH/TEXTREL,
+                   16/16 required exports, NEEDED system-only, ldd -r clean,
+                   glibc floor ok, build-ids match, smoke test PASSED,
+                   must-have backend sonames present (check 9)
+                   (SDL_GetVersion 3005000, revision SDL-3.5.0-a8591d9, dummy
+                   video Init, window + software renderer, pixel read-back
+                   (18,52,86), Quit)
+First-run fixes  : none beyond the two gate fixes made on linux-x64. Rebuilt
+                   2026-10-01 22:50 UTC with the vendored libdecor header; that
+                   rebuild (above) supersedes the first adopted build (4e92e6a3...).
+                   Its BUILD-INFO.txt dlopen() list predates a record-only regex
+                   fix, so it omits the dotted name libusb-1.0.so.0, which is in
+                   the binary.
+Reproducibility  : not separately re-run (emulated); same scripts and image
+                   scheme as linux-x64, which is byte-reproducible.
+Note             : the smoke test EXECUTED the library under qemu. qemu is not
+                   silicon; running the managed test suite on real arm64
+                   hardware remains worth doing before a release.
+Adopted into native_libraries/linux-arm64/ : YES, 2026-10-01, with SDL's LICENSE.txt
+                   beside it as LICENSE-SDL3.txt and libSDL3.so.provenance.txt;
+                   unstripped twin in unstripped/linux-arm64/
+
+================================================================================
+linux-riscv64                                                     BUILT + PASSED
+================================================================================
+Built            : 2026-10-01 22:33:10 UTC
+Built by         : linux/build.sh riscv64 -> container-build.sh
+Build host       : Dell Precision 7770, LMDE 7, x86_64, podman 5.4.2 -
+                   the same x86_64 laptop, under qemu-user emulation (qemu 10.0.13)
+Duration         : 456s (wall clock inside the container)
+Network          : DISABLED during this build (interfaces: lo)
+Derived image    : codebrix-sdl3-build-riscv64
+Base image       : quay.io/pypa/manylinux_2_39_riscv64@sha256:04b3acc69a6cebb10ac1252587d202acce6445d91c783d3f92229bb2b2483069
+Container OS     : Rocky Linux 10.2 (Red Quartz), ldd (GNU libc) 2.39
+Compiler         : cc (GCC) 14.3.1 20251022 (Red Hat 14.3.1-4)
+Linker           : GNU ld version 2.41-63.el10
+cmake / ninja    : cmake version 4.4.3 (pinned 4.4.3) / 1.13.2.git.kitware.jobserver-pipe-1 (pinned 1.13.2)
+arch options     : -DSDL_X11_XSCRNSAVER=OFF
+
+-devel packages in the image (rpm --whatprovides; "no package provides" = absent):
+                   libX11-devel                                     required  libX11-devel-1.8.10-1.el10
+                   libXext-devel                                    required  libXext-devel-1.3.6-3.el10
+                   libXrandr-devel                                  required  libXrandr-devel-1.5.4-5.el10
+                   libXcursor-devel                                 required  libXcursor-devel-1.2.1-9.el10
+                   libXi-devel                                      required  libXi-devel-1.8.1-7.el10
+                   libXfixes-devel                                  required  libXfixes-devel-6.0.1-5.el10
+                   libxkbcommon-devel                               required  libxkbcommon-devel-1.7.0-4.el10
+                   wayland-devel                                    required  wayland-devel-1.24.0-1.el10
+                   mesa-libGL-devel                                 required  mesa-libGL-devel-25.2.7-4.el10.rocky.0.1
+                   mesa-libEGL-devel                                required  mesa-libEGL-devel-25.2.7-4.el10.rocky.0.1
+                   alsa-lib-devel                                   required  alsa-lib-devel-1.2.15.3-2.el10
+                   pulseaudio-libs-devel                            required  pulseaudio-libs-devel-17.0-6.el10
+                   dbus-devel                                       required  dbus-devel-1.14.10-5.el10
+                   systemd-devel                                    required  systemd-devel-257-23.el10_2.2.rocky.0.1
+                   libXScrnSaver-devel                              optional  no package provides libXScrnSaver-devel
+                   libXtst-devel                                    optional  libXtst-devel-1.2.4-8.el10
+                   wayland-protocols-devel                          optional  wayland-protocols-devel-1.45-1.el10
+                   libdecor-devel                                   optional  libdecor-devel-0.2.2-5.el10
+                   mesa-libgbm-devel                                optional  mesa-libgbm-devel-25.2.7-4.el10.rocky.0.1
+                   libdrm-devel                                     optional  libdrm-devel-2.4.128-1.el10
+                   pipewire-devel                                   optional  pipewire-devel-1.4.11-1.el10_2.1
+                   ibus-devel                                       optional  ibus-devel-1.5.32-1.el10
+                   libusb1-devel                                    optional  libusb1-devel-1.0.30-1.el10_2
+                   libusbx-devel                                    optional  libusb1-devel-1.0.30-1.el10_2
+                   jack-audio-connection-kit-devel                  optional  no package provides jack-audio-connection-kit-devel
+                   pipewire-jack-audio-connection-kit-devel         optional  pipewire-jack-audio-connection-kit-devel-1.4.11-1.el10_2.1
+                   sndio-devel                                      optional  no package provides sndio-devel
+                   fribidi-devel                                    optional  fribidi-devel-1.0.14-4.el10
+                   libthai-devel                                    optional  libthai-devel-0.1.29-10.el10
+                   liburing-devel                                   optional  liburing-devel-2.12-1.el10
+
+Enabled backends (SDL's CMake summary; "(dynamic)" = dlopen()ed at run time):
+                   Video drivers: dummy kmsdrm(dynamic) offscreen wayland(dynamic) x11(dynamic)
+                   X11 libraries: xcursor xdbe xfixes xinput2 xrandr xshape xsync xtest
+                   Render drivers: gpu ogl ogl_es ogl_es2 vulkan
+                   GPU drivers: openxr vulkan
+                   Audio drivers: alsa(dynamic) disk dummy jack(dynamic) pipewire(dynamic) pulseaudio(dynamic)
+                   Joystick drivers: hidapi linux virtual
+                   Camera drivers: dummy pipewire(dynamic) v4l2
+Run-time drivers (smoke test):
+                   video drivers    : wayland x11 kmsdrm offscreen dummy evdev
+                   audio drivers    : pipewire pulseaudio alsa jack disk dummy
+                   render drivers   : opengl opengles2 opengles vulkan gpu software
+Not compiled in  : XScreenSaver extension (see First-run fix; on X11,
+                   SDL_DisableScreenSaver() then relies on the D-Bus inhibit),
+                   sndio (not packaged). UNLIKE x64/arm64 this RID HAS libdecor
+                   0.2.2, PipeWire 1.4.11 and liburing 2.12.
+
+File             : libSDL3.so       SONAME libSDL3.so.0
+Size (stripped)  : 3,297,656 bytes
+Size (unstripped): 20,130,024 bytes
+SHA256           : f47815400f81b6e23c2847a3752d5ccbe40d587aa6db43e7497c757de39d3209
+SHA256 unstripped: 541664302247713747385050fd174cbec74802284376d41a98f0b0696788922c
+Build-id (sha1)  : 38ffc84a8bb11b9cabdae4206bd1a4abafd25baa
+ELF              : ELF64, RISC-V
+glibc floor      : 2.38 (allowed <= 2.39)
+Dynamic deps     : libc.so.6 libm.so.6
+Exports          : 1302  (symbol version(s): SDL3_0.0.0)
+Gate             : ELF class/machine ok, SONAME ok, no RPATH/RUNPATH/TEXTREL,
+                   16/16 required exports, NEEDED system-only, ldd -r clean,
+                   glibc floor ok, build-ids match, smoke test PASSED,
+                   must-have backend sonames present (check 9)
+                   (SDL_GetVersion 3005000, revision SDL-3.5.0-a8591d9, dummy
+                   video Init, window + software renderer, pixel read-back
+                   (18,52,86), Quit)
+First-run fix    : the first run failed at cmake configure: "Couldn't find
+                   dependency package for XSCRNSAVER". RHEL 10 / Rocky 10 dropped
+                   libXScrnSaver-devel and SDL treats a wanted-but-missing X11
+                   extension as an error. pins.env now passes
+                   SDL_CMAKE_OPTIONS_RISCV64="-DSDL_X11_XSCRNSAVER=OFF".
+Reproducibility  : not separately re-run (emulated).
+Scripts          : built before three later script additions (the /work
+                   prefix map, the vendored pkg-config hook - empty for
+                   riscv64 - and gate check 9). Check 9 was applied to this
+                   binary afterwards by hand: all nine must-have sonames
+                   present, libdecor-0.so.0 included. Not rebuilt (ruling
+                   2026-10-01: riscv64 unchanged).
+Note             : the smoke test EXECUTED the library under qemu. Real RISC-V
+                   hardware is still the last word.
+Adopted into native_libraries/linux-riscv64/ : YES, 2026-10-01, with SDL's LICENSE.txt
+                   beside it as LICENSE-SDL3.txt and libSDL3.so.provenance.txt;
+                   unstripped twin in unstripped/linux-riscv64/
+
+================================================================================
+android-arm64                                                     BUILT + PASSED
+================================================================================
+Built            : 2026-10-01 22:38:11 UTC
+Built by         : android/build.py --arch all (both ABIs in one run)
+Build host       : Dell Precision 7770, LMDE 7, x86_64, podman 5.4.2 -
+                   the x86_64 laptop itself
+Duration         : 12s for this ABI (configure + compile + strip + gates);
+                   25.5s wall for the whole two-ABI container run
+Network          : DISABLED during this build (interfaces: lo)
+Tool image       : codebrix-sdl3-build-x86_64 (cmake, ninja, Python only)
+NDK              : 30.0.16248370 (r30), mounted read-only
+Compiler         : Android (16134705, +pgo, +bolt, +lto, +mlgo, based on r574158c) clang version 21.0.0
+                   aarch64-linux-android33 (ABI arm64-v8a)
+cmake / ninja    : cmake version 4.4.3 / 1.13.2.git.kitware.jobserver-pipe-1
+ABI options      : -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=33
+
+Enabled backends (SDL's CMake summary):
+                   Video drivers: android dummy offscreen
+                   Render drivers: gpu ogl_es ogl_es2 vulkan
+                   GPU drivers: openxr vulkan
+                   Audio drivers: aaudio disk dummy opensles
+                   Joystick drivers: android hidapi virtual
+                   Camera drivers: android dummy
+
+File             : libSDL3.so       SONAME libSDL3.so
+Size (stripped)  : 2,219,600 bytes
+Size (unstripped): 11,143,800 bytes
+SHA256           : 7f5522fc29bca58769bf0f53c2403e2e946449534534bdca8c9ce563927fd7f3
+SHA256 unstripped: 29fc1eba735a38349880ef383cc1887465cb3b04db5179dc44a11dfbca88a30d
+Build-id (sha1)  : 434b17e6da9f987669cccb1f19de059b8b4b4add
+ELF              : ELF64, AArch64
+Android API      : 33 (ELF note; NDK note r30 / 16248370)
+PT_LOAD align    : 16384 16384 16384 16384
+Dynamic deps     : libm.so libdl.so liblog.so libandroid.so libOpenSLES.so libGLESv1_CM.so libGLESv2.so libc.so
+Exports          : 1302  (1301 SDL_* + JNI_OnLoad)
+Gate             : verify.py on both twins - ELF class/machine ok, API 33 ok,
+                   16 KB PT_LOAD ok, no W+X, SONAME ok, NEEDED system-only, no
+                   GLIBC_, no TEXTREL/RPATH/RUNPATH, 17/17 required exports,
+                   66/66 Java native methods registered, build-ids match - PASSED
+Runtime          : UNRUN - no device or emulator. smoke-test cross-compiled, not run.
+Reproducible     : YES - three from-scratch runs (two scratch paths), identical
+                   stripped and unstripped sha256
+vs ppy 2026.722.0: native/android/arm64-v8a/libSDL3.so - NDK r28c, clang 19.0.1, API 21,
+                   shipped unstripped: 12,650,288 bytes (2,459,040 after llvm-strip
+                   --strip-unneeded). Same SONAME, same NEEDED (same order), same
+                   1302 exported names, same dlopen()ed names, same 16 KB alignment.
+                   Differences: API 33 vs 21, NDK r30 vs r28c.
+
+================================================================================
+android-x64                                                       BUILT + PASSED
+================================================================================
+Built            : 2026-10-01 22:38:24 UTC
+Built by         : android/build.py --arch all (both ABIs in one run)
+Build host       : Dell Precision 7770, LMDE 7, x86_64, podman 5.4.2 -
+                   the x86_64 laptop itself
+Duration         : 13s for this ABI (configure + compile + strip + gates);
+                   25.5s wall for the whole two-ABI container run
+Network          : DISABLED during this build (interfaces: lo)
+Tool image       : codebrix-sdl3-build-x86_64 (cmake, ninja, Python only)
+NDK              : 30.0.16248370 (r30), mounted read-only
+Compiler         : Android (16134705, +pgo, +bolt, +lto, +mlgo, based on r574158c) clang version 21.0.0
+                   x86_64-linux-android33 (ABI x86_64)
+cmake / ninja    : cmake version 4.4.3 / 1.13.2.git.kitware.jobserver-pipe-1
+ABI options      : -DANDROID_ABI=x86_64 -DANDROID_PLATFORM=33
+
+Enabled backends (SDL's CMake summary):
+                   Video drivers: android dummy offscreen
+                   Render drivers: gpu ogl_es ogl_es2 vulkan
+                   GPU drivers: openxr vulkan
+                   Audio drivers: aaudio disk dummy opensles
+                   Joystick drivers: android hidapi virtual
+                   Camera drivers: android dummy
+
+File             : libSDL3.so       SONAME libSDL3.so
+Size (stripped)  : 2,453,856 bytes
+Size (unstripped): 11,127,856 bytes
+SHA256           : 2bf36223c88d7c6e5cf6038b3d69b7de2aef858bc7479d023064634da22c42c4
+SHA256 unstripped: eb5ce8703668ba112d92e082a9dd828c596b4d7af5c4e0db704d569ed6a22c7b
+Build-id (sha1)  : c06c705695b78f6fc75122bbaa758b4a7b39445d
+ELF              : ELF64, x86-64
+Android API      : 33 (ELF note; NDK note r30 / 16248370)
+PT_LOAD align    : 16384 16384 16384 16384
+Dynamic deps     : libm.so libdl.so liblog.so libandroid.so libOpenSLES.so libGLESv1_CM.so libGLESv2.so libc.so
+Exports          : 1302  (1301 SDL_* + JNI_OnLoad)
+Gate             : verify.py on both twins - ELF class/machine ok, API 33 ok,
+                   16 KB PT_LOAD ok, no W+X, SONAME ok, NEEDED system-only, no
+                   GLIBC_, no TEXTREL/RPATH/RUNPATH, 17/17 required exports,
+                   66/66 Java native methods registered, build-ids match - PASSED
+Runtime          : UNRUN - no device or emulator. smoke-test cross-compiled, not run.
+Reproducible     : YES - three from-scratch runs (two scratch paths), identical
+                   stripped and unstripped sha256
+vs ppy 2026.722.0: native/android/x86_64/libSDL3.so - NDK r28c, clang 19.0.1, API 21,
+                   shipped unstripped: 12,435,552 bytes (2,631,512 after llvm-strip
+                   --strip-unneeded). Same SONAME, same NEEDED (same order), same
+                   1302 exported names, same dlopen()ed names, same 16 KB alignment.
+                   Differences: API 33 vs 21, NDK r30 vs r28c.
+
+================================================================================
+android (SDL3AndroidBridge.jar)                                   BUILT + PASSED
+================================================================================
+Built            : 2026-10-01 22:40:37 UTC
+Built by         : android/build-jar.sh (directly on the host)
+Build host       : Dell Precision 7770, LMDE 7, x86_64
+Duration         : about 1s
+Network          : not used (javac + jar only)
+Sources          : SDL/android-project/app/src/main/java/org/libsdl/app/*.java (12 files)
+JDK              : OpenJDK 25.0.4.1 (Debian openjdk-25-jdk-headless)
+javac            : --release 11 -encoding utf8 -classpath android.jar
+                   (class file major 55); output: two "deprecated API" notes only
+jar              : jar --create --date=2026-07-19T00:00:00Z, entries sorted
+android.jar      : platforms;android-37.2 (highest installed),
+                   sha256 1db2419dbd45457f83b90ef8a7ef41e118174782c9a5c2185b55899df022767f
+
+File             : SDL3AndroidBridge.jar
+Contents         : 50 classes (org/libsdl/app) + META-INF/ + MANIFEST.MF = 52 entries
+Size             : 93,663 bytes
+SHA256           : 1b6a9d01d417cc480b5cef31261097f9d49e33af02e45b1e79cc1b7861384d80
+Reproducible     : YES with JDK 25 - five builds, against android-36, -37.0 and
+                   -37.2, one sha256. JDK 21.0.12.1: same entry names, different
+                   class bytes (so pins.json pins jdk_major 25)
+Gate             : the class set is checked against the libraries: every Java
+                   `native` method (66) is registered by both libSDL3.so files
+Runtime          : UNRUN - no device or emulator
+vs ppy 2026.722.0: SDL3-CS/Jars/SDL3AndroidBridge.jar (JDK 11.0.31, 93,106 bytes,
+                   53 entries / 51 classes). Same public/protected API in all 34
+                   named classes. ppy's one extra class, HIDDeviceBLESteamController$5,
+                   is the synthetic enum switch-map holder JDK 11 javac emits and
+                   javac 21+ does not. Remaining javap -p differences are
+                   compiler-synthetic only.
+Packing          : <EmbeddedJar> on net10.0-android only
+
+================================================================================
+win-x64                                            ADOPTED (ppy 2026.722.0)
+================================================================================
+Route            : ADOPTED from the ppy.SDL3-CS 2026.722.0 NuGet package - not
+                   built here (yet). See "Windows (the two win-* entries)" above.
+Path in nupkg    : runtimes/win-x64/native/SDL3.dll
+ppy CI flags     : -A x64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded (+ Release,
+                   SDL_SHARED=ON, SDL_STATIC=OFF; gameinput sed)
+File             : SDL3.dll
+Size             : 3,048,960 bytes
+SHA256           : fcaf8f9c511712a0886218168ab07c6b9faa77bc1e286135e26584804dae981a
+Architecture     : PE32+ DLL, machine 0x8664 (x64); linker 14.51; OS/subsystem
+                   6.0; DllCharacteristics 0x0160 (HIGH_ENTROPY_VA,
+                   DYNAMIC_BASE, NX_COMPAT); not Authenticode-signed
+Exports          : 1303 - exactly SDL/src/dynapi/SDL_dynapi.sym (1302 SDL_* +
+                   JNI_OnLoad)
+Imports          : ADVAPI32 GDI32 HID IMM32 KERNEL32 OLEAUT32 SETUPAPI SHELL32
+                   USER32 VERSION WINMM ole32 - OS only; NO VC runtime (static
+                   CRT), no delay-loads
+SDL_GetRevision  : SDL-3.5.0-a8591d9 (string present in the binary)
+GameInput        : not compiled in (no gameinput DLL / GameInputCreate strings)
+Debug symbols    : none published by ppy; nothing in unstripped/
+Gate             : static facts above verified on Linux; NOT executed
+Rebuild          : windows/build-win-x64.ps1 - written 2026-10-01, UNRUN
+Adopted into native_libraries/win-x64/ : YES, 2026-10-01, with SDL's LICENSE.txt
+                   beside it as LICENSE-SDL3.txt and SDL3.dll.provenance.txt
+
+================================================================================
+win-arm64                                          ADOPTED (ppy 2026.722.0)
+================================================================================
+Route            : ADOPTED from the ppy.SDL3-CS 2026.722.0 NuGet package - not
+                   built here (yet). See "Windows (the two win-* entries)" above.
+Path in nupkg    : runtimes/win-arm64/native/SDL3.dll
+ppy CI flags     : -A ARM64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded (+ Release,
+                   SDL_SHARED=ON, SDL_STATIC=OFF; gameinput sed) - cl cross-
+                   compiling on ppy's x64 runner
+File             : SDL3.dll
+Size             : 2,904,064 bytes
+SHA256           : 9917e0bd78890a68cc4ade5c8bce35c171c65f2e70e11164f443226d7a74f322
+Architecture     : PE32+ DLL, machine 0xAA64 (ARM64); linker 14.51; OS/subsystem
+                   6.2; DllCharacteristics 0x0160; not Authenticode-signed
+Exports          : 1303 - exactly SDL/src/dynapi/SDL_dynapi.sym
+Imports          : the same twelve OS DLLs as win-x64; NO VC runtime
+SDL_GetRevision  : SDL-3.5.0-a8591d9 (string present in the binary)
+GameInput        : not compiled in
+Debug symbols    : none published by ppy; nothing in unstripped/
+Gate             : static facts above verified on Linux; NOT executed
+Rebuild          : windows/build-win-arm64.ps1 (Native on ARM64, or
+                   CrossFromX64) - written 2026-10-01, UNRUN
+Adopted into native_libraries/win-arm64/ : YES, 2026-10-01, with SDL's
+                   LICENSE.txt beside it as LICENSE-SDL3.txt and
+                   SDL3.dll.provenance.txt
+
+================================================================================
+osx-x64                                            ADOPTED (ppy 2026.722.0)
+================================================================================
+Route            : ADOPTED from the ppy.SDL3-CS 2026.722.0 NuGet package - not
+                   built here (yet). See "macOS (the two osx-* entries)" above.
+Path in nupkg    : runtimes/osx-x64/native/libSDL3.dylib
+ppy CI flags     : -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=10.14
+                   (+ Release, SDL_SHARED=ON, SDL_STATIC=OFF)
+File             : libSDL3.dylib
+Size             : 3,288,160 bytes
+SHA256           : ef431dae951ff5c4b15fb6a786582cbc4632ce83de2df05b8bedcc264d0ba9de
+Architecture     : thin Mach-O 64-bit dylib, x86_64 (not universal)
+Minimum macOS    : 10.14 (LC_BUILD_VERSION minos); SDK 26.5
+LC_UUID          : CBCA0221-A566-33FB-A7AA-65B184E75B6B
+Install name     : @rpath/libSDL3.0.dylib (501.0.0) - as SDL builds it; shipped
+                   as libSDL3.dylib; no LC_RPATH
+Signature        : NONE (x86_64; the linker signs arm64 output only)
+Symbols          : NOT stripped (7538 local symbols); no dSYM published
+Exports          : 1303 - exactly SDL/src/dynapi/SDL_dynapi.sym
+Dependencies     : libSystem, libobjc + 21 system frameworks (CoreHaptics and
+                   UniformTypeIdentifiers weak) - OS only
+SDL_GetRevision  : SDL-3.5.0-a8591d9 (string present in the binary)
+Gate             : static facts above verified on Linux; NOT executed
+Rebuild          : macos/build-osx-x64.sh - written 2026-10-01, UNRUN
+Adopted into native_libraries/osx-x64/ : YES, 2026-10-01, with SDL's LICENSE.txt
+                   beside it as LICENSE-SDL3.txt and libSDL3.dylib.provenance.txt
+
+================================================================================
+osx-arm64                                          ADOPTED (ppy 2026.722.0)
+================================================================================
+Route            : ADOPTED from the ppy.SDL3-CS 2026.722.0 NuGet package - not
+                   built here (yet). See "macOS (the two osx-* entries)" above.
+Path in nupkg    : runtimes/osx-arm64/native/libSDL3.dylib
+ppy CI flags     : -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+                   (+ Release, SDL_SHARED=ON, SDL_STATIC=OFF)
+File             : libSDL3.dylib
+Size             : 2,975,904 bytes
+SHA256           : 1889457732d1eb71fbc0dfe0a80727cc2b303310b648dabdcf103e3f37ad47b0
+Architecture     : thin Mach-O 64-bit dylib, arm64 (not universal)
+Minimum macOS    : 11.0 (LC_BUILD_VERSION minos); SDK 26.5
+LC_UUID          : 4C79C675-BBFD-38C5-865E-8F77C6EC715A
+Install name     : @rpath/libSDL3.0.dylib (501.0.0) - as SDL builds it; shipped
+                   as libSDL3.dylib; no LC_RPATH
+Signature        : LC_CODE_SIGNATURE present (linker ad-hoc); file byte-identical
+                   to ppy's, so intact - not re-checked with codesign (macOS-only)
+Symbols          : NOT stripped (7901 local symbols); no dSYM published
+Exports          : 1303 - exactly SDL/src/dynapi/SDL_dynapi.sym
+Dependencies     : the same 23 OS entries as osx-x64 - OS only
+SDL_GetRevision  : SDL-3.5.0-a8591d9 (string present in the binary)
+Gate             : static facts above verified on Linux; NOT executed
+Rebuild          : macos/build-osx-arm64.sh - written 2026-10-01, UNRUN
+Adopted into native_libraries/osx-arm64/ : YES, 2026-10-01, with SDL's
+                   LICENSE.txt beside it as LICENSE-SDL3.txt and
+                   libSDL3.dylib.provenance.txt
+================================================================================

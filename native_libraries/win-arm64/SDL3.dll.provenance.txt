@@ -1,0 +1,88 @@
+SDL3.dll -- Windows ARM64 (win-arm64)
+================================================================================
+ADOPTED FROM the ppy.SDL3-CS 2026.722.0 NuGet package, not built here (yet).
+
+Jeremy's ruling (2026-10-01): for the first published version the Windows,
+macOS and Android binaries are adopted from ppy/SDL3-CS 2026.722.0, which built
+them from the SAME SDL commit this repository vendors; only the three Linux RIDs
+are built here. The scripts that rebuild this RID from sdl3-native-tools/SDL/
+are in this repository all the same, so it can be rebuilt without ppy.
+
+REBUILD: see sdl3-native-tools/windows/README.txt - scripts written 2026-10-01, UNRUN
+
+Package           : ppy.SDL3-CS 2026.722.0 (nuget.org)
+Package URL       : https://www.nuget.org/api/v2/package/ppy.SDL3-CS/2026.722.0
+Package sha512    : zAA8c/eEO9uPds8P6CgrASjH6LZwynHGWb/URdrmONyWE5LjqQ/E7f7WriUqVasHLnY6PTeckM27yG6BZrojZA==
+                    (base64, as recorded by NuGet in the local cache's
+                    ppy.sdl3-cs.2026.722.0.nupkg.sha512, and re-computed from the
+                    cached .nupkg on 2026-10-01: identical)
+Package sha256    : 3ed618f843e5dec89c591d22261b40ca29de8cfbcaf79c6a609c0d74d8e6ca59
+Package size      : 30823672 bytes
+Path in the nupkg : runtimes/win-arm64/native/SDL3.dll
+Taken from        : the LOCAL NuGet cache - nothing was downloaded for this
+                    step. The cache file, the ZIP entry read straight out of the
+                    .nupkg, and ppy's git tag 2026.722.0 (commit 7f836c9, "Update
+                    native binaries (#290)", native/win-arm64/SDL3.dll) are all
+                    byte-identical (same sha256).
+
+Output SHA-256    : 9917e0bd78890a68cc4ade5c8bce35c171c65f2e70e11164f443226d7a74f322
+Output size       : 2904064 bytes
+
+SDL version       : 3.5.0 (development snapshot - NOT a tagged SDL release)
+SDL commit        : a8591d943b7079b17fdd018dc04ec9c71dc94ae4 ("Fix #15985", 2026-07-19)
+                    - ppy's External/SDL submodule at tag 2026.722.0, and the
+                    commit vendored in sdl3-native-tools/SDL/
+SDL_GetRevision() : SDL-3.5.0-a8591d9 (the string is in the binary)
+
+ppy CI (.github/workflows/build.yml, matrix entry "win-arm64", runs-on windows-latest):
+                    BUILD_TYPE=Release, flags: -A ARM64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+                    External/build.sh then runs, for SDL:
+                      sed -i 's/#include <gameinput.h>/#_include <gameinput.h>/g' CMakeLists.txt
+                      cmake -B build -A ARM64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF
+                      cmake --build build/ --config Release --verbose
+                    (default Visual Studio generator; no -DSDL_TESTS etc.)
+
+Architecture      : PE32+ DLL, machine 0xAA64 (IMAGE_FILE_MACHINE_ARM64) - ARM64
+Linker version    : 14.51 (PE optional header) - the MSVC 14.51 toolset,
+                    cross-compiled on ppy's x64 GitHub runner (the -A ARM64
+                    Visual Studio generator platform)
+OS / subsystem    : 6.2 / Windows GUI 6.2; DllCharacteristics 0x0160
+                    (HIGH_ENTROPY_VA, DYNAMIC_BASE, NX_COMPAT)
+Imports (DLLs)    : ADVAPI32.dll GDI32.dll HID.DLL IMM32.dll KERNEL32.dll OLEAUT32.dll
+                    SETUPAPI.dll SHELL32.dll USER32.dll VERSION.dll WINMM.dll ole32.dll
+                    - operating-system DLLs only. NO vcruntime140.dll, msvcp140.dll,
+                    ucrtbase.dll or api-ms-win-crt-*: the C runtime is linked
+                    statically (MultiThreaded), so no Visual C++ Redistributable
+                    is needed on the user's machine. No delay-load imports.
+Exports           : 1303 named exports (1302 SDL_* + JNI_OnLoad) - EXACTLY the
+                    1303 names in SDL/src/dynapi/SDL_dynapi.sym, none missing,
+                    none extra; SDL_Init and SDL_GetVersion present
+Debug info        : no CodeView/PDB record; ppy published no .pdb
+Authenticode      : not signed (no security directory)
+GameInput         : NOT compiled in - no gameinput.dll / gameinputredist.dll /
+                    GameInputCreate strings, and no SDL_JOYSTICK_GAMEINPUT hint
+                    name (the backend's own hint). ppy's build.sh disables
+                    SDL's <gameinput.h> detection on Windows with a sed; see
+                    sdl3-native-tools/windows/README.txt, GAMEINPUT. XInput,
+                    Windows.Gaming.Input, RawInput and HIDAPI joystick paths
+                    are present.
+
+Verified on Linux : python3 standard-library PE parser (pefile is not installed)
+                    for machine type, imports, exports, debug and security
+                    directories; GNU objdump -p cross-check (x64 only - binutils
+                    here does not read ARM64 PE); `file`; strings
+
+Not verified      : this file has NOT been executed on Windows
+                    by this repository - the smoke test (sdl3-native-tools/
+                    smoke-test.c) runs as part of the rebuild scripts' gate,
+                    which have not run yet.
+
+Licences          : the BINARY is SDL, zlib licence, Copyright (C) 1997-2026 Sam
+                    Lantinga - LICENSE-SDL3.txt beside this file is SDL's
+                    LICENSE.txt, verbatim. ppy's PACKAGING (the ppy.SDL3-CS
+                    NuGet package and its C# bindings) is MIT, Copyright (c) 2024
+                    ppy Pty Ltd (SDL3-CS/LICENCE);
+                    no ppy-authored code is in this binary. See
+                    THIRD-PARTY-NOTICES.txt in the repository root.
+
+Vendored on       : 2026-10-01

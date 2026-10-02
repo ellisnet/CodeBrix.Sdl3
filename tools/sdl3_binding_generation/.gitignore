@@ -1,0 +1,4 @@
+# The family .gitignore ignores *.rsp (Visual Studio response files); the ClangSharp
+# response files in rsp/ are source inputs of the binding generator and must be committed.
+!*.rsp
+__pycache__/

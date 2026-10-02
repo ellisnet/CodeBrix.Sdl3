@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CodeBrix.Sdl3\CodeBrix.Sdl3.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
+    <PackageReference Include="SilverAssertions.ApacheLicenseForever" Version="1.0.248.1071" />
+  </ItemGroup>
+
+  <!--
+    The committed desktop natives (native_libraries/<rid>/) are copied into this project's output
+    keeping the package layout - runtimes/<rid>/native/<file> - so the suite exercises exactly the
+    layout the package gives an application rather than a flattened copy that would never fail.
+    (The CodeBrix.VideoPlayback.Dav1d mechanism: ContentWithTargetPath feeds only the copy
+    machinery.) Provenance files and the Android natives and jar are not copied.
+
+    A ProjectReference produces no deps.json native-asset entries, so the test assembly installs a
+    DllImport resolver for CodeBrix.Sdl3 that loads runtimes/<current rid>/native/ (see
+    Internal/Sdl3NativeLibrary.cs). Tests that need the native library skip, with the reason,
+    when the binary for the current RID is not present.
+  -->
+  <ItemGroup>
+    <_Sdl3TestNativeLibrary Include="..\..\native_libraries\**\*"
+                            Exclude="..\..\native_libraries\**\*.provenance.txt;..\..\native_libraries\android\**;..\..\native_libraries\android-*\**" />
+  </ItemGroup>
+
+  <Target Name="CodeBrixSdl3StageNativeLibraries" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <ContentWithTargetPath Include="@(_Sdl3TestNativeLibrary)" TargetPath="runtimes\%(RecursiveDir)native\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
+</Project>

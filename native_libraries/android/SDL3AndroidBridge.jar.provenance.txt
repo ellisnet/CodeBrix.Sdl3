@@ -1,0 +1,69 @@
+SDL3AndroidBridge.jar -- the Java half of SDL on Android (org.libsdl.app)
+================================================================================
+This jar was BUILT HERE, from the SDL source snapshot vendored in this
+repository, by:
+
+    sdl3-native-tools/android/build-jar.sh
+
+which compiles the 12 Java sources in
+sdl3-native-tools/SDL/android-project/app/src/main/java/org/libsdl/app/
+(SDLActivity, SDL, SDLSurface, SDLAudioManager, SDLControllerManager,
+HIDDeviceManager, ...) against the Android SDK's android.jar and packs the
+classes with `jar`. No Gradle, no download. android.jar supplies compile-time
+stubs only; nothing from it is in this jar.
+
+It is the Java counterpart of native_libraries/android-{arm64,x64}/libSDL3.so
+(same SDL commit): libSDL3.so's JNI_OnLoad registers the native methods these
+classes declare, and both android-* gates check that all 66 are registered.
+
+SDL commit        : a8591d943b7079b17fdd018dc04ec9c71dc94ae4 ("Fix #15985", 2026-07-19)
+Source            : sdl3-native-tools/SDL/android-project/ (unmodified)
+Patches applied   : none
+Built             : 2026-10-01 22:40:37 UTC
+Build duration    : about 1 s
+Build host        : Dell Precision 7770 laptop, LMDE 7, x86_64 (directly on the host)
+JDK               : OpenJDK 25.0.4.1 (Debian package openjdk-25-jdk-headless)
+javac             : javac --release 11 -encoding utf8 -classpath android.jar
+                    (class file version 55 = Java 11, as SDL's own Gradle project
+                    and the reference jar target)
+jar               : jar --create --date=2026-07-19T00:00:00Z, entries in sorted
+                    order (timestamps pinned for reproducibility)
+android.jar       : Android SDK platforms;android-37.2 (the highest installed)
+                    sha256 1db2419dbd45457f83b90ef8a7ef41e118174782c9a5c2185b55899df022767f
+                    android-36 and android-37.0 produce a BYTE-IDENTICAL jar
+javac output      : two notes only ("Some input files use or override a
+                    deprecated API") - no warnings, no errors
+
+Contents          : 50 classes in org/libsdl/app/ + META-INF/MANIFEST.MF
+                    (52 zip entries); full list in output/android/classes.txt
+                    of a build
+Output SHA-256    : 1b6a9d01d417cc480b5cef31261097f9d49e33af02e45b1e79cc1b7861384d80
+Output size       : 93663 bytes
+
+Reproducibility   : rebuilt 5 times with JDK 25 (against android-36, -37.0 and
+                    -37.2): identical sha256 every time. A different JDK gives a
+                    valid jar with the same class set but different bytes (JDK
+                    21.0.12.1 tried: same 52 entry names, different class bytes
+                    and manifest Created-By).
+
+Compared with ppy : ppy/SDL3-CS 2026.722.0 SDL3-CS/Jars/SDL3AndroidBridge.jar
+                    (same commit; JDK 11.0.31 Microsoft; 93,106 bytes; 53 entries,
+                    51 classes). Same public/protected API in all 34 named
+                    classes (javap -protected: identical). ppy has ONE extra class,
+                    HIDDeviceBLESteamController$5 - the synthetic switch-map
+                    holder JDK 11's javac emits for a switch over an enum; javac
+                    21+ compiles the same switch without it. Other javap -p
+                    differences are compiler-synthetic only (anonymous-class
+                    constructor signatures; the $values() helper javac 15+ adds
+                    to enums).
+
+Runtime tests     : UNRUN - no Android device or emulator was used.
+
+Packing           : <EmbeddedJar> on the net10.0-android target framework only.
+
+Vendored on       : 2026-10-01
+
+SDL, including these Java sources, is licensed under the zlib license,
+Copyright (C) 1997-2026 Sam Lantinga (sdl3-native-tools/SDL/LICENSE.txt). See
+THIRD-PARTY-NOTICES.txt in the repository root.
+================================================================================

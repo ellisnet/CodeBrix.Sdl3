@@ -1,0 +1,13 @@
+# pkg-config stub for the vendored libdecor 0.2.2 HEADER - see UPSTREAM.txt.
+# There is no library here and none is linked: SDL is built with SDL_DEPS_SHARED=ON /
+# SDL_WAYLAND_LIBDECOR_SHARED=ON and dlopen()s libdecor-0.so.0 at run time. SDL's CMake only
+# needs pkg-config to report libdecor-0 as found, with its version (which becomes
+# SDL_LIBDECOR_VERSION_MAJOR/MINOR/PATCH) and the include directory.
+prefix=${pcfiledir}
+includedir=${prefix}
+
+Name: libdecor-0
+Description: libdecor public header only (vendored for the CodeBrix.Sdl3 Linux build; no library)
+Version: 0.2.2
+Cflags: -I${includedir}
+Libs: -ldecor-0

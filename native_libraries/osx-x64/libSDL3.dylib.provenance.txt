@@ -1,0 +1,87 @@
+libSDL3.dylib -- macOS Intel (osx-x64)
+================================================================================
+ADOPTED FROM the ppy.SDL3-CS 2026.722.0 NuGet package, not built here (yet).
+
+Jeremy's ruling (2026-10-01): for the first published version the Windows,
+macOS and Android binaries are adopted from ppy/SDL3-CS 2026.722.0, which built
+them from the SAME SDL commit this repository vendors; only the three Linux RIDs
+are built here. The scripts that rebuild this RID from sdl3-native-tools/SDL/
+are in this repository all the same, so it can be rebuilt without ppy.
+
+REBUILD: see sdl3-native-tools/macos/README.txt - scripts written 2026-10-01, UNRUN
+
+Package           : ppy.SDL3-CS 2026.722.0 (nuget.org)
+Package URL       : https://www.nuget.org/api/v2/package/ppy.SDL3-CS/2026.722.0
+Package sha512    : zAA8c/eEO9uPds8P6CgrASjH6LZwynHGWb/URdrmONyWE5LjqQ/E7f7WriUqVasHLnY6PTeckM27yG6BZrojZA==
+                    (base64, as recorded by NuGet in the local cache's
+                    ppy.sdl3-cs.2026.722.0.nupkg.sha512, and re-computed from the
+                    cached .nupkg on 2026-10-01: identical)
+Package sha256    : 3ed618f843e5dec89c591d22261b40ca29de8cfbcaf79c6a609c0d74d8e6ca59
+Package size      : 30823672 bytes
+Path in the nupkg : runtimes/osx-x64/native/libSDL3.dylib
+Taken from        : the LOCAL NuGet cache - nothing was downloaded for this
+                    step. The cache file, the ZIP entry read straight out of the
+                    .nupkg, and ppy's git tag 2026.722.0 (commit 7f836c9, "Update
+                    native binaries (#290)", native/osx-x64/libSDL3.dylib) are all
+                    byte-identical (same sha256).
+
+Output SHA-256    : ef431dae951ff5c4b15fb6a786582cbc4632ce83de2df05b8bedcc264d0ba9de
+Output size       : 3288160 bytes
+
+SDL version       : 3.5.0 (development snapshot - NOT a tagged SDL release)
+SDL commit        : a8591d943b7079b17fdd018dc04ec9c71dc94ae4 ("Fix #15985", 2026-07-19)
+                    - ppy's External/SDL submodule at tag 2026.722.0, and the
+                    commit vendored in sdl3-native-tools/SDL/
+SDL_GetRevision() : SDL-3.5.0-a8591d9 (the string is in the binary)
+
+ppy CI (.github/workflows/build.yml, matrix entry "osx-x64", runs-on macos-latest):
+                    BUILD_TYPE=Release, flags: -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=10.14
+                    External/build.sh then runs, for SDL:
+                      cmake -B build -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=10.14 -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF
+                      cmake --build build/ --config Release --verbose
+                    (default Unix Makefiles generator; no -DSDL_TESTS etc.)
+
+Architecture      : thin Mach-O 64-bit dylib (MH_DYLIB), cpu x86_64 - NOT a universal file
+Minimum macOS     : 10.14 (LC_BUILD_VERSION minos), SDK 26.5
+LC_UUID           : CBCA0221-A566-33FB-A7AA-65B184E75B6B
+Symbol table      : NOT stripped - 7538 local, 1303 exported, 638 undefined
+                    (LC_DYSYMTAB); ppy published no dSYM
+Install name      : @rpath/libSDL3.0.dylib (current/compat version 501.0.0),
+                    as SDL's CMake names it. Shipped under the unversioned
+                    name libSDL3.dylib, which DllImport("SDL3") probes; .NET
+                    loads by path, so the install name is never consulted.
+Code signature    : NONE (no LC_CODE_SIGNATURE). Expected for an x86_64 slice:
+                    the linker ad-hoc signs arm64 output only, and macOS does
+                    not require a signature to load x86_64 code. Left exactly
+                    as ppy shipped it.
+LC_RPATH          : none
+Dependencies      : libSystem.B.dylib, libobjc.A.dylib and the system frameworks
+                    AppKit AudioToolbox AVFoundation Carbon Cocoa CoreAudio
+                    CoreFoundation CoreGraphics CoreHaptics(weak) CoreMedia
+                    CoreServices CoreVideo ForceFeedback Foundation GameController
+                    IOKit Metal QuartzCore Security UniformTypeIdentifiers(weak)
+                    UserNotifications - 23 load commands, every one under
+                    /usr/lib/ or /System/Library/Frameworks/
+                    Nothing outside the OS; no Homebrew or /usr/local path.
+Exports           : 1303 external defined symbols (1302 SDL_* + JNI_OnLoad) -
+                    EXACTLY the 1303 names in SDL/src/dynapi/SDL_dynapi.sym, none
+                    missing, none extra; SDL_Init and SDL_GetVersion present
+
+Verified on Linux : python3 standard-library Mach-O parser (load commands,
+                    symbol table); `file`; strings. otool/lipo/codesign are
+                    macOS-only and were not available
+
+Not verified      : this file has NOT been executed on macOS
+                    by this repository - the smoke test (sdl3-native-tools/
+                    smoke-test.c) runs as part of the rebuild scripts' gate,
+                    which have not run yet.
+
+Licences          : the BINARY is SDL, zlib licence, Copyright (C) 1997-2026 Sam
+                    Lantinga - LICENSE-SDL3.txt beside this file is SDL's
+                    LICENSE.txt, verbatim. ppy's PACKAGING (the ppy.SDL3-CS
+                    NuGet package and its C# bindings) is MIT, Copyright (c) 2024
+                    ppy Pty Ltd (SDL3-CS/LICENCE);
+                    no ppy-authored code is in this binary. See
+                    THIRD-PARTY-NOTICES.txt in the repository root.
+
+Vendored on       : 2026-10-01

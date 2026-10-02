@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      SITUATIONAL EXCEPTIONS (documented in MAINTAINER-README.txt): this project is a
+      Roslyn source generator, which the compiler loads in-process, so it MUST target
+      netstandard2.0 (not net10.0) - and because netstandard2.0 defaults to C# 7.3,
+      LangVersion is pinned (12, as the upstream generator was written against) so the
+      file-scoped-namespace and collection-expression source compiles. Nullable stays
+      enabled for fidelity with the upstream generator source.
+
+      The generator runs ONLY while CodeBrix.Sdl3 itself is compiled: it writes the
+      friendly string/Utf8String overloads, and those are compiled INTO CodeBrix.Sdl3.dll.
+      So this project is NOT packed anywhere (no analyzers/ folder in the package) and
+      package consumers never load it.
+
+      NoWarn CS1591: ruling D5 of the CodeBrix.Sdl3 plan (2026-10-01) allows it on the
+      library and on this generator companion.
+    -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>CodeBrix.Sdl3.SourceGeneration</RootNamespace>
+    <AssemblyName>CodeBrix.Sdl3.SourceGeneration</AssemblyName>
+    <!-- AssemblyVersion must be a valid major.minor.build.revision (each <= 65535).
+         Pinned independently of the date-based package version of CodeBrix.Sdl3. -->
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <!-- EnforceExtendedAnalyzerRules ensures the generator follows Roslyn component best practices -->
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IsPackable>false</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    Version pins (deliberate - do not "bump to latest" without re-reading this):
+    the generator is a classic ISourceGenerator, kept for fidelity with the upstream
+    generator source. Microsoft.CodeAnalysis.Analyzers 3.11.0 and later ban the
+    non-incremental generator API under EnforceExtendedAnalyzerRules (RS1035/RS1042 as
+    errors), and Microsoft.CodeAnalysis.CSharp 4.13.0 and later require Analyzers 3.11.0
+    or later. So these are the LATEST stable pair that still builds an ISourceGenerator
+    with 0 warnings: CSharp 4.12.0 + Analyzers 3.3.4 (probed against every newer pair on
+    nuget.org, 2026-10-01). A lower Roslyn reference also keeps the generator loadable by
+    older compilers (any compiler at Roslyn 4.12 or later runs it).
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

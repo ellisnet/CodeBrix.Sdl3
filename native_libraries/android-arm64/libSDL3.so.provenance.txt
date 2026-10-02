@@ -1,0 +1,102 @@
+libSDL3.so -- Android ARM64 (android-arm64, ABI arm64-v8a)
+================================================================================
+This binary was BUILT HERE, from the SDL source snapshot vendored in this
+repository, by:
+
+    python3 sdl3-native-tools/android/build.py --ndk <NDK 30.0.16248370>
+
+run inside the codebrix-sdl3-build-x86_64 tool image (sdl3-native-tools/linux/)
+with the network DISABLED and the Android NDK mounted read-only. Nothing was
+downloaded; the compiler and sysroot are the NDK's, not the container's.
+Re-running that command reproduces this binary: three from-scratch builds
+(two different scratch paths) gave byte-identical stripped AND unstripped
+files. See sdl3-native-tools/android/README.txt.
+
+SDL version       : 3.5.0 (development snapshot - NOT a tagged SDL release)
+SDL commit        : a8591d943b7079b17fdd018dc04ec9c71dc94ae4 ("Fix #15985", 2026-07-19)
+                    the same commit ppy/SDL3-CS 2026.722.0's bindings and
+                    binaries were made from
+Source            : sdl3-native-tools/SDL/ (unmodified; see SDL/UPSTREAM.txt)
+Patches applied   : none
+SDL_GetRevision() : SDL-3.5.0-a8591d9 (the string is in the binary)
+
+Built             : 2026-10-01 22:38:11 UTC
+Build duration    : 12s (configure + compile + strip + gates, this ABI)
+Build host        : Dell Precision 7770 laptop, LMDE 7, x86_64, podman 5.4.2
+Network           : DISABLED during this build (interfaces: lo)
+Tool image        : codebrix-sdl3-build-x86_64 (linux/Containerfile.x86_64 on the
+                    digest-pinned manylinux_2_28_x86_64 base in linux/pins.env);
+                    it supplies cmake, ninja and Python only
+NDK               : 30.0.16248370 (r30)
+Compiler          : Android (16134705, +pgo, +bolt, +lto, +mlgo, based on r574158c) clang version 21.0.0
+                    target aarch64-linux-android33
+cmake / ninja     : 4.4.3 / 1.13.2.git.kitware.jobserver-pipe-1
+CMake options     : -G Ninja -DCMAKE_TOOLCHAIN_FILE=<NDK>/build/cmake/android.toolchain.cmake
+                    -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=33
+                    -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+                    -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF
+                    -DSDL_EXAMPLES=OFF -DSDL_INSTALL=OFF -DSDL_ANDROID_JAR=OFF
+                    -DSDL_REVISION=SDL-3.5.0-a8591d9
+                    CMAKE_C_FLAGS/CMAKE_CXX_FLAGS="-g -ffile-prefix-map=<scratch>/SDL=SDL
+                      -ffile-prefix-map=<scratch>/build=build -ffile-prefix-map=<NDK>=ndk
+                      -fdebug-compilation-dir=build"
+                    CMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384
+                      -Wl,-z,common-page-size=16384 -Wl,--build-id=sha1"
+                    ANDROID_STL left at the NDK default (c++_static: hidapi's
+                    one C++ file links libc++ statically; no libc++_shared.so)
+                    then llvm-strip --strip-unneeded
+
+Backends enabled (SDL's CMake summary):
+                    Video drivers: android dummy offscreen
+                    Render drivers: gpu ogl_es ogl_es2 vulkan
+                    GPU drivers: openxr vulkan
+                    Audio drivers: aaudio disk dummy opensles
+                    Joystick drivers: android hidapi virtual
+                    Camera drivers: android dummy
+
+Architecture      : ELF64, AArch64 (e_machine 183)
+Android API       : 33 (ELF Android note; ndk note "r30 / 16248370")
+SONAME            : libSDL3.so (unversioned on Android, as SDL's CMake builds it;
+                    the name DllImport("SDL3") probes)
+Dynamic deps      : libm.so libdl.so liblog.so libandroid.so libOpenSLES.so libGLESv1_CM.so libGLESv2.so libc.so
+                    (all Android NDK stable system libraries; libaaudio,
+                    libvulkan, libEGL, libcamera2ndk, libmediandk and
+                    libopenxr_loader are dlopen()ed at run time, not NEEDED)
+PT_LOAD alignment : 16384 16384 16384 16384 (16 KB page-size ready)
+Exports           : 1302 dynamic symbols (1301 SDL_* + JNI_OnLoad)
+JNI               : JNI_OnLoad exported; all 66 native methods declared by the
+                    bridge's Java sources (SDL3AndroidBridge.jar, built from the
+                    same commit) are named in its RegisterNatives tables
+Build-id (sha1)   : 434b17e6da9f987669cccb1f19de059b8b4b4add
+
+Output SHA-256    : 7f5522fc29bca58769bf0f53c2403e2e946449534534bdca8c9ce563927fd7f3
+Output size       : 2219600 bytes
+Unstripped SHA-256: 29fc1eba735a38349880ef383cc1887465cb3b04db5179dc44a11dfbca88a30d
+Unstripped size   : 11143800 bytes
+                    (stored in sdl3-native-tools/unstripped/android-arm64/libSDL3.so)
+
+Gate              : sdl3-native-tools/android/verify.py on both twins - ELF64
+                    class + machine, Android API note == 33, every PT_LOAD
+                    >= 16 KB aligned and congruent, no W+X segment, SONAME,
+                    NEEDED only Android system libraries, no GLIBC_ versions, no
+                    TEXTREL/RPATH/RUNPATH, required exports (SDL_Init,
+                    SDL_GetVersion, SDL_CreateWindow and 13 more, JNI_OnLoad),
+                    Java native-method registration, build-id present and equal
+                    in both twins - ALL PASSED
+Runtime tests     : UNRUN - no Android device or emulator was used. smoke-test.c
+                    was cross-compiled for this ABI by the build (not run).
+
+Compared with ppy : ppy/SDL3-CS 2026.722.0 native/android/arm64-v8a/libSDL3.so (same
+                    commit; NDK r28c, clang 19.0.1, ANDROID_PLATFORM=21, shipped
+                    unstripped with DWARF): 12,650,288 bytes as shipped,
+                    2,459,040 bytes after llvm-strip --strip-unneeded.
+                    Same SONAME, same NEEDED list (same order), same 1302 exported
+                    names, same dlopen()ed library names, same 16 KB alignment.
+                    Differences: API note 33 vs 21, NDK r30 vs r28c.
+
+Vendored on       : 2026-10-01
+
+LICENSE-SDL3.txt beside this file is SDL's LICENSE.txt, verbatim. SDL is
+licensed under the zlib license, Copyright (C) 1997-2026 Sam Lantinga. See
+THIRD-PARTY-NOTICES.txt in the repository root.
+================================================================================

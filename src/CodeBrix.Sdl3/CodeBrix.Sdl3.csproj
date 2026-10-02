@@ -1,0 +1,186 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    CodeBrix.Sdl3 - C# bindings for SDL3 plus the SDL3 native libraries for nine runtime
+    identifiers, in one package with no NuGet dependencies.
+
+    Exceptions to the family's default csproj shape, each deliberate (see
+    MAINTAINER-README.txt, "CODING CONVENTIONS"):
+
+      * net10.0;net10.0-android (ruling D10, the CodeBrix.Audio.MidiConnect shape): the
+        android TFM exists so the SDL Java bridge (SDLActivity and friends) can ride along as
+        an EmbeddedJar, which only an android TFM can carry. The android natives ship under
+        runtimes/android-*/native for both TFMs.
+      * Nullable enable: the bindings and the hand-written helpers are a port whose public
+        signatures carry `?` annotations (string? returns, nullable out parameters); stripping
+        them would change the observable API the bindings are generated to have.
+      * NoWarn CS1591 (ruling D5 of the CodeBrix.Sdl3 plan, 2026-10-01): the bulk of the public
+        surface is machine-generated from the SDL headers by script and regenerated wholesale,
+        so hand-written XML docs are not possible there. GenerateDocumentationFile stays true so
+        consumers still get the .xml for every member that does carry a comment.
+      * AllowUnsafeBlocks: the bindings are pointer-based P/Invoke.
+  -->
+
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net10.0-android</TargetFrameworks>
+    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-android'">33.0</SupportedOSPlatformVersion>
+    <AssemblyName>CodeBrix.Sdl3</AssemblyName>
+    <RootNamespace>CodeBrix.Sdl3</RootNamespace>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Keeps the internal JetBrains annotation attributes (JetBrainsAnnotations.cs) visible to
+         JetBrains code analysis, exactly as the bindings were written against. -->
+    <DefineConstants>$(DefineConstants);JETBRAINS_ANNOTATIONS</DefineConstants>
+  </PropertyGroup>
+
+  <!--
+    Package / assembly version: date-stamped and auto-incrementing.
+
+    Format:  1.<x>.<y>.<z>   (every field is derived from UTC "now")
+
+      1  (major)     Always 1 for this library.
+      x  (minor)     Whole years since $(_VersionBaseYear).
+                     With base 2026: 2026=0, 2027=1, 2028=2, ...
+      y  (build)     Day of year, 1-based inclusive, UTC.
+                     Jan 1 = 1, Feb 1 = 32, Dec 31 = 365 (366 in a leap year).
+      z  (revision)  Minute of day, UTC, range 0 to 1439.
+                     00:00 = 0, 23:59 = 1439.
+
+    The version is always strictly increasing over time:
+      * within a day, z grows;
+      * at a day boundary, y increments and outranks z resetting to 0;
+      * at a (UTC) year boundary, x increments and outranks y and z resetting.
+
+    Notes / caveats:
+      * All fields read from System.DateTime.UtcNow, so a local dev build and a
+        UTC CI build agree on the value. Math.Floor on the minutes keeps z in
+        0..1439 (plain rounding could land on 1440 late in the day).
+      * Because the value depends on the clock, every build produces a NEW
+        version. With GeneratePackageOnBuild=true that means a fresh .nupkg on
+        each build, and two builds in the SAME UTC minute produce the SAME
+        version (so do not publish two packages from within one minute).
+      * This is date-stamp versioning, not SemVer: minor encodes the year and
+        major is pinned to 1, so major/minor do not signal API compatibility.
+      * To re-baseline the minor number, change _VersionBaseYear below.
+  -->
+  <PropertyGroup>
+    <_VersionBaseYear>2026</_VersionBaseYear>
+    <_VersionYears>$([MSBuild]::Subtract($([System.DateTime]::UtcNow.Year), $(_VersionBaseYear)))</_VersionYears>
+    <_VersionDayOfYear>$([System.DateTime]::UtcNow.DayOfYear)</_VersionDayOfYear>
+    <_VersionMinuteOfDay>$([System.Convert]::ToInt32($([System.Math]::Floor($([System.DateTime]::UtcNow.TimeOfDay.TotalMinutes)))))</_VersionMinuteOfDay>
+    <BuildVersion>1.$(_VersionYears).$(_VersionDayOfYear).$(_VersionMinuteOfDay)</BuildVersion>
+    <Version>$(BuildVersion)</Version>
+    <AssemblyVersion>$(BuildVersion)</AssemblyVersion>
+    <FileVersion>$(BuildVersion)</FileVersion>
+  </PropertyGroup>
+
+  <!--
+    License: the managed binding code is MIT (the upstream bindings this library is ported from,
+    and this repository's LICENSE), while the SDL3 native binaries in runtimes/ - and the binding
+    code machine-generated from the SDL headers - are zlib. The suffix tracks the more
+    notice-demanding of the incorporated licences, as CodeBrix.Platform.GameEngine.Sdl2 does,
+    so the package is .ZlibLicenseForever and PackageLicenseExpression carries both.
+    The copyright line prepends the upstream bindings' copyright (MIT requires it to travel).
+  -->
+  <PropertyGroup>
+    <PackageId>CodeBrix.Sdl3.ZlibLicenseForever</PackageId>
+    <Product>CodeBrix.Sdl3</Product>
+    <Title>CodeBrix.Sdl3</Title>
+    <Authors>Jeremy Ellis</Authors>
+    <Description>C# bindings for SDL3 (Simple DirectMedia Layer 3) with the SDL3 native libraries included for Windows, macOS, Linux and Android. Window management, input, gamepads, audio, rendering, GPU and the rest of the SDL3 API from .NET, with friendly string overloads and no NuGet dependencies.</Description>
+    <PackageLicenseExpression>MIT AND Zlib</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/ellisnet/CodeBrix.Sdl3</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ellisnet/CodeBrix.Sdl3</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageIcon>icon-codebrix-128.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Copyright>Copyright (c) 2024 ppy Pty Ltd. Copyright (c) 2026 Jeremy Ellis and contributors</Copyright>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <IsPackable>true</IsPackable>
+    <PackageTags>sdl;sdl3;bindings;native;window;input;gamepad;audio;CodeBrix</PackageTags>
+  </PropertyGroup>
+
+  <!--
+    The icon, README.md, the agent guide and the third-party notices all come from the repo root
+    (single-package repo, the CodeBrix.SkiaSvg layout). The None Remove/Include pair for the
+    agent guide is the CodeBrix.Audio.MidiConnect multi-target pattern: it makes the item explicit
+    in the multi-target outer build while avoiding duplicates in the inner framework builds.
+  -->
+  <ItemGroup>
+    <None Include="..\..\icon-codebrix-128.png" Pack="true" PackagePath="" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" />
+    <None Include="..\..\THIRD-PARTY-NOTICES.txt" Pack="true" PackagePath="" />
+    <None Remove="..\..\AGENT-README.txt" />
+    <None Include="..\..\AGENT-README.txt" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <!--
+    The Roslyn source generator that writes the friendly overloads (Utf8String parameters in place
+    of `const char *`, string returns in place of `char *`). It runs while THIS project compiles
+    and its output is compiled into CodeBrix.Sdl3.dll, so it is consumed as an analyzer only
+    (ReferenceOutputAssembly=false) and is NOT packed: consumers never load it.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\CodeBrix.Sdl3.SourceGeneration\CodeBrix.Sdl3.SourceGeneration.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      SetTargetFramework="TargetFramework=netstandard2.0" />
+  </ItemGroup>
+
+  <!--
+    SDL3 native binaries, committed under native_libraries/<rid>/ and packed into the RID-specific
+    folders the .NET host probes at run time. Nothing is downloaded or built during a dotnet build.
+    Each binary has a .provenance.txt beside it (NOT packed) recording where it came from; the
+    build recipes for every RID live in sdl3-native-tools/ (see BUILD-PROVENANCE.txt there).
+    LICENSE-SDL3.txt (SDL's zlib licence, verbatim) travels beside every binary.
+
+    Linux natives ARE shipped here, unlike CodeBrix.Platform.GameEngine.Sdl2: SDL3 is not yet a
+    library every distribution provides, and these Linux builds are manylinux builds (an old
+    glibc floor, SDL's backends loaded at run time), so one binary per architecture runs on
+    every current desktop distribution.
+
+    Each item is conditional on the file existing so the project builds while natives are still
+    being produced; a release package must carry all of them (see MAINTAINER-README.txt).
+
+    Forward slashes with NO trailing separator in PackagePath: NuGet matches RID-specific assets
+    on the exact "runtimes/{rid}/native/{file}" shape, and a trailing separator produced an empty
+    path segment in the GameEngine.Sdl2 package.
+  -->
+  <ItemGroup>
+    <None Include="..\..\native_libraries\win-x64\SDL3.dll" Pack="true" PackagePath="runtimes/win-x64/native" Condition="Exists('..\..\native_libraries\win-x64\SDL3.dll')" />
+    <None Include="..\..\native_libraries\win-x64\LICENSE-SDL3.txt" Pack="true" PackagePath="runtimes/win-x64/native" Condition="Exists('..\..\native_libraries\win-x64\SDL3.dll')" />
+    <None Include="..\..\native_libraries\win-arm64\SDL3.dll" Pack="true" PackagePath="runtimes/win-arm64/native" Condition="Exists('..\..\native_libraries\win-arm64\SDL3.dll')" />
+    <None Include="..\..\native_libraries\win-arm64\LICENSE-SDL3.txt" Pack="true" PackagePath="runtimes/win-arm64/native" Condition="Exists('..\..\native_libraries\win-arm64\SDL3.dll')" />
+    <None Include="..\..\native_libraries\osx-x64\libSDL3.dylib" Pack="true" PackagePath="runtimes/osx-x64/native" Condition="Exists('..\..\native_libraries\osx-x64\libSDL3.dylib')" />
+    <None Include="..\..\native_libraries\osx-x64\LICENSE-SDL3.txt" Pack="true" PackagePath="runtimes/osx-x64/native" Condition="Exists('..\..\native_libraries\osx-x64\libSDL3.dylib')" />
+    <None Include="..\..\native_libraries\osx-arm64\libSDL3.dylib" Pack="true" PackagePath="runtimes/osx-arm64/native" Condition="Exists('..\..\native_libraries\osx-arm64\libSDL3.dylib')" />
+    <None Include="..\..\native_libraries\osx-arm64\LICENSE-SDL3.txt" Pack="true" PackagePath="runtimes/osx-arm64/native" Condition="Exists('..\..\native_libraries\osx-arm64\libSDL3.dylib')" />
+    <None Include="..\..\native_libraries\linux-x64\libSDL3.so" Pack="true" PackagePath="runtimes/linux-x64/native" Condition="Exists('..\..\native_libraries\linux-x64\libSDL3.so')" />
+    <None Include="..\..\native_libraries\linux-x64\LICENSE-SDL3.txt" Pack="true" PackagePath="runtimes/linux-x64/native" Condition="Exists('..\..\native_libraries\linux-x64\libSDL3.so')" />
+    <None Include="..\..\native_libraries\linux-arm64\libSDL3.so" Pack="true" PackagePath="runtimes/linux-arm64/native" Condition="Exists('..\..\native_libraries\linux-arm64\libSDL3.so')" />
+    <None Include="..\..\native_libraries\linux-arm64\LICENSE-SDL3.txt" Pack="true" PackagePath="runtimes/linux-arm64/native" Condition="Exists('..\..\native_libraries\linux-arm64\libSDL3.so')" />
+    <None Include="..\..\native_libraries\linux-riscv64\libSDL3.so" Pack="true" PackagePath="runtimes/linux-riscv64/native" Condition="Exists('..\..\native_libraries\linux-riscv64\libSDL3.so')" />
+    <None Include="..\..\native_libraries\linux-riscv64\LICENSE-SDL3.txt" Pack="true" PackagePath="runtimes/linux-riscv64/native" Condition="Exists('..\..\native_libraries\linux-riscv64\libSDL3.so')" />
+    <None Include="..\..\native_libraries\android-x64\libSDL3.so" Pack="true" PackagePath="runtimes/android-x64/native" Condition="Exists('..\..\native_libraries\android-x64\libSDL3.so')" />
+    <None Include="..\..\native_libraries\android-x64\LICENSE-SDL3.txt" Pack="true" PackagePath="runtimes/android-x64/native" Condition="Exists('..\..\native_libraries\android-x64\libSDL3.so')" />
+    <None Include="..\..\native_libraries\android-arm64\libSDL3.so" Pack="true" PackagePath="runtimes/android-arm64/native" Condition="Exists('..\..\native_libraries\android-arm64\libSDL3.so')" />
+    <None Include="..\..\native_libraries\android-arm64\LICENSE-SDL3.txt" Pack="true" PackagePath="runtimes/android-arm64/native" Condition="Exists('..\..\native_libraries\android-arm64\libSDL3.so')" />
+  </ItemGroup>
+
+  <!--
+    The SDL Java bridge (org.libsdl.app.SDLActivity and friends), built in sdl3-native-tools/android
+    from the vendored SDL android-project sources. An EmbeddedJar is only meaningful on the android
+    TFM: it is bound to C# (namespace Org.Libsdl.App) and embedded in the assembly, and the android
+    build of a consuming app packs it into the APK. Transforms/Metadata.xml removes the few Java
+    members the binding generator cannot bind and marks SDLSurface.onApplyWindowInsets not-null so
+    the generated override matches View.IOnApplyWindowInsetsListener (otherwise CS8766); the other
+    two Transforms files are the empty standard templates.
+  -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android' and Exists('..\..\native_libraries\android\SDL3AndroidBridge.jar')">
+    <EmbeddedJar Include="..\..\native_libraries\android\SDL3AndroidBridge.jar" />
+  </ItemGroup>
+
+</Project>

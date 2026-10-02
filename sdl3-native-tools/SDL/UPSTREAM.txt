@@ -1,0 +1,145 @@
+================================================================================
+sdl3-native-tools/SDL - VENDORED UPSTREAM SOURCE SNAPSHOT
+================================================================================
+
+WHAT THIS FOLDER IS
+--------------------------------------------------------------------------------
+An unmodified snapshot of the upstream SDL (Simple DirectMedia Layer) source
+tree. It is the ONLY source the SDL3 native libraries in this repository are
+ever built from. No build step in this repository clones, downloads, or
+otherwise fetches SDL (or anything else) at build time - see ../README.txt for
+the rule this exists to satisfy.
+
+UPSTREAM IDENTITY
+--------------------------------------------------------------------------------
+Project        : SDL - Simple DirectMedia Layer, version 3
+Upstream URL   : https://github.com/libsdl-org/SDL
+Snapshot commit: a8591d943b7079b17fdd018dc04ec9c71dc94ae4
+Commit subject : "Fix #15985"
+Author date    : 2026-07-19 13:50:59 +0800
+Commit date    : 2026-07-19 20:06:04 -0700
+Version header : 3.5.0   (include/SDL3/SDL_version.h: SDL_MAJOR_VERSION 3,
+                          SDL_MINOR_VERSION 5, SDL_MICRO_VERSION 0)
+                 => SDL_GetVersion() returns 3005000; Linux SONAME libSDL3.so.0
+                 SDL_GetRevision() of our builds: SDL-3.5.0-a8591d9 (pinned in
+                 ../linux/pins.env, because this copy has no .git to describe)
+Licence        : zlib - the full text is LICENSE.txt beside this file,
+                 Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>.
+                 It is shipped beside every binary as LICENSE-SDL3.txt.
+
+THIS IS NOT A TAGGED SDL RELEASE - AND WHY
+--------------------------------------------------------------------------------
+3.5.0 is SDL's in-development version number on the main branch at this commit;
+there is no release-3.5.0 tag behind it. The commit is chosen deliberately: it
+is exactly the SDL commit that the ppy/SDL3-CS 2026.722.0 release pins as its
+External/SDL submodule - the commit its C# bindings were GENERATED from and its
+prebuilt native binaries were BUILT from. CodeBrix.Sdl3's managed bindings are
+ported from that release, so building the natives from this same commit means
+the bindings, this source and every shipped native describe one C API. A tagged
+release would be a different API surface from the one the bindings declare.
+
+When the bindings are regenerated against a newer SDL, this snapshot is
+replaced as a whole by a new one, this file is rewritten, and every native is
+rebuilt - never a partial update.
+
+HOW THE COPY WAS MADE
+--------------------------------------------------------------------------------
+Copied on 2026-10-01 from the External/SDL submodule of a clean
+~/GitHome/SDL3-CS checkout (ppy/SDL3-CS at tag 2026.722.0; the submodule
+initialized shallow at the pinned commit the same day), with exactly this
+command:
+
+    rsync -a --exclude='/.git' \
+        /home/jeremy/GitHome/SDL3-CS/External/SDL/ \
+        /home/jeremy/GitHome/CodeBrix.Sdl3/sdl3-native-tools/SDL/
+
+and this identity check of the source, run before copying:
+
+    $ git -C ~/GitHome/SDL3-CS/External/SDL rev-parse HEAD
+    a8591d943b7079b17fdd018dc04ec9c71dc94ae4
+
+Everything in the upstream working tree was copied EXCEPT the .git entry (in a
+submodule checkout that is a one-line gitdir pointer file). There were no build
+directories in the checkout, so nothing else was skipped. 2307 files, about
+59 MB, equal to `git ls-files | wc -l` of the upstream checkout. The upstream
+android-project/, VisualC/, VisualC-GDK/, Xcode/, build-scripts/, cmake/,
+docs/, examples/, include/, src/, test/ and wayland-protocols/ are all present,
+so the snapshot is a complete upstream tree and not a subset. (The Android
+bridge jar is built from android-project/'s Java sources; SDL's own Wayland
+protocol XML lives in wayland-protocols/.)
+
+After the copy, `diff -r -x .git <source> <this folder>` reported no
+differences.
+
+TREE CHECKSUM (for a future diff)
+--------------------------------------------------------------------------------
+Run from inside this folder, EXCLUDING this UPSTREAM.txt (which is not part of
+upstream's tree):
+
+    find . -type f ! -path ./UPSTREAM.txt | LC_ALL=C sort \
+        | xargs -d '\n' sha256sum | sha256sum
+
+    d27ddd424ab424f4976b8bd1c0ba4b5732778cd7130241b7f95edb6a72608f6f  -
+
+The same command run in the upstream checkout (with `-path ./.git -prune`
+instead of the UPSTREAM.txt exclusion) gave the same value on 2026-10-01.
+
+NOT MODIFIED
+--------------------------------------------------------------------------------
+No file in this folder has been modified, renamed, reformatted or deleted, and
+none ever should be. This file (UPSTREAM.txt) is the ONLY addition, and it is a
+new file, not an edit of an upstream one.
+
+If a future build ever needs a change to this source, it goes in
+../patches/*.patch and is applied by the build scripts into a scratch copy at
+build time, never into this folder. As of 2026-10-01 there are no patches.
+
+FOURTEEN FILES THAT UPSTREAM'S OWN .gitignore HIDES - COMMIT THEM WITH -f
+--------------------------------------------------------------------------------
+Upstream tracks 14 files that its own .gitignore rules match (it force-added
+them): `git -C <upstream checkout> ls-files -ci --exclude-standard` lists them.
+Those .gitignore files are part of this unmodified snapshot and, being deeper
+than ../.gitignore, they win inside this folder - so a plain `git add` of this
+repository silently leaves these 14 files out. They must be added once with -f:
+
+    git add -f \
+      sdl3-native-tools/SDL/Xcode/SDL/pkg-support/resources/CMake/SDL3Config.cmake \
+      sdl3-native-tools/SDL/Xcode/SDL/pkg-support/resources/CMake/SDL3ConfigVersion.cmake \
+      sdl3-native-tools/SDL/Xcode/SDL/pkg-support/share/cmake/SDL3/SDL3Config.cmake \
+      sdl3-native-tools/SDL/Xcode/SDL/pkg-support/share/cmake/SDL3/SDL3ConfigVersion.cmake \
+      sdl3-native-tools/SDL/build-scripts/pkg-support/android/aar/cmake/SDL3Config.cmake \
+      sdl3-native-tools/SDL/build-scripts/pkg-support/mingw/cmake/SDL3Config.cmake \
+      sdl3-native-tools/SDL/build-scripts/pkg-support/mingw/cmake/SDL3ConfigVersion.cmake \
+      sdl3-native-tools/SDL/src/render/gpu/shaders/color.frag.hlsl \
+      sdl3-native-tools/SDL/src/render/gpu/shaders/linepoint.vert.hlsl \
+      sdl3-native-tools/SDL/src/render/gpu/shaders/texture_advanced.frag.hlsl \
+      sdl3-native-tools/SDL/src/render/gpu/shaders/texture_rgb.frag.hlsl \
+      sdl3-native-tools/SDL/src/render/gpu/shaders/texture_rgba.frag.hlsl \
+      sdl3-native-tools/SDL/src/render/gpu/shaders/tri_color.vert.hlsl \
+      sdl3-native-tools/SDL/src/render/gpu/shaders/tri_texture.vert.hlsl
+
+Once tracked, ignore rules no longer apply to them. None of the 14 is an input
+to any build in this repository (packaging templates and the HLSL sources of
+shaders that are also present precompiled), but the snapshot is only complete -
+and the tree checksum above only matches - with them committed. Check with:
+
+    git ls-files --others --ignored --exclude-standard -- sdl3-native-tools
+        -> should print nothing once they are tracked
+
+NOTHING IN THE SDL BUILD FETCHES
+--------------------------------------------------------------------------------
+SDL's CMake build has no download step: no FetchContent, no ExternalProject, no
+submodules. Every optional dependency is detected on the build machine
+(headers via pkg-config / find_package) and, with SDL_DEPS_SHARED=ON, loaded
+with dlopen() at run time on the user's machine. The Linux container build
+proves this on every run by building with no network interface.
+
+VERIFYING THIS SNAPSHOT AGAINST UPSTREAM (optional, needs network)
+--------------------------------------------------------------------------------
+    git clone https://github.com/libsdl-org/SDL /tmp/sdl-verify
+    git -C /tmp/sdl-verify checkout a8591d943b7079b17fdd018dc04ec9c71dc94ae4
+    diff -r -x '.git' -x 'UPSTREAM.txt' /tmp/sdl-verify .   # expect no differences
+
+That check is a convenience for a human, not a build step: nothing in the build
+depends on it, and the build works with no network at all.
+================================================================================

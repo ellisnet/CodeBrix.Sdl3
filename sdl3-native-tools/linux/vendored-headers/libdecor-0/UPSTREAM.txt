@@ -1,0 +1,76 @@
+================================================================================
+sdl3-native-tools/linux/vendored-headers/libdecor-0 - VENDORED HEADER
+================================================================================
+
+WHAT THIS FOLDER IS
+--------------------------------------------------------------------------------
+libdecor's public header, unmodified, plus a pkg-config stub, so the linux-x64
+and linux-arm64 builds can compile SDL's libdecor support (client-side window
+decorations on Wayland compositors that do not draw them - GNOME / mutter,
+Weston). The AlmaLinux 8 manylinux images used for those two RIDs do not
+package libdecor-devel at all; the riscv64 image (Rocky Linux 10) does, and its
+build ignores this folder.
+
+Only the HEADER is needed. SDL is configured with SDL_DEPS_SHARED=ON
+(SDL_WAYLAND_LIBDECOR_SHARED=ON): it dlopen()s libdecor-0.so.0 on the user's
+machine at run time and links no libdecor library, so libdecor never appears
+in the shipped library's NEEDED list (the gate checks it). No libdecor code is
+compiled into SDL - the header contributes declarations, types and enum values.
+
+Vendored by Jeremy's ruling, 2026-10-01 (GO on vendoring the libdecor header
+and rebuilding linux-x64 and linux-arm64 with the libdecor backend).
+
+UPSTREAM IDENTITY
+--------------------------------------------------------------------------------
+Project        : libdecor - a client-side decorations library for Wayland clients
+Upstream URL   : https://gitlab.freedesktop.org/libdecor/libdecor
+Tag            : 0.2.2
+File           : src/libdecor.h
+Fetched from   : https://gitlab.freedesktop.org/libdecor/libdecor/-/raw/0.2.2/src/libdecor.h
+Fetched on     : 2026-10-01 15:47:46 PDT, with exactly:
+                     curl -fsSL -o libdecor.h \
+                       https://gitlab.freedesktop.org/libdecor/libdecor/-/raw/0.2.2/src/libdecor.h
+SHA-256        : bb85696fea29eea7f7c78cdddacbc02e6234a0ac94f5d331e7f36eedb5f52cfa
+Size           : 13631 bytes
+Licence        : MIT (the permission notice is in the header itself)
+                 Copyright (c) 2017-2018 Red Hat Inc.
+                 Copyright (c) 2018 Jonas Adahl (Jonas Ådahl)
+                 Copyright (c) 2019 Christian Rauch
+                 Listed in the repository-root THIRD-PARTY-NOTICES.txt.
+
+0.2.2 is the same libdecor version the riscv64 image's libdecor-devel package
+carries (libdecor-devel-0.2.2-5.el10), so all three Linux RIDs compile against
+one libdecor API. SDL turns the pkg-config version into SDL_LIBDECOR_VERSION_*
+= 0/2/2; with dynamic loading it resolves the post-0.1 functions as OPTIONAL
+symbols, so the library still works with an older libdecor on the user's
+machine and simply runs without decorations where there is none.
+
+FILES
+--------------------------------------------------------------------------------
+  libdecor.h      upstream's src/libdecor.h, byte-for-byte (sha256 above). It
+                  includes <stdbool.h> and <wayland-client.h>, which the build
+                  images provide (wayland-devel).
+  libdecor-0.pc   OUR pkg-config stub (Name libdecor-0, Version 0.2.2, includedir
+                  = this folder via ${pcfiledir}). Not an upstream file.
+  UPSTREAM.txt    this file.
+
+HOW THE BUILD USES IT
+--------------------------------------------------------------------------------
+linux/pins.env SDL_VENDORED_PKGCONFIG_<ARCH> names this folder for x64 and
+arm64. container-build.sh prepends it to PKG_CONFIG_PATH and passes
+-DDECOR_0_LIB=libdecor-0.so.0, the soname SDL then dlopen()s (SDL's
+FindLibraryAndSONAME would otherwise search for a libdecor-0.so to read the
+soname from, and there is deliberately none). BUILD-INFO.txt records the
+result.
+
+NOT MODIFIED
+--------------------------------------------------------------------------------
+libdecor.h is never edited. To move to a newer libdecor, fetch the new tag's
+src/libdecor.h, replace the file, and update the tag, URL, sha256, size and date
+above, the Version in libdecor-0.pc, and ../../../BUILD-PROVENANCE.txt.
+
+VERIFY (optional, needs network)
+--------------------------------------------------------------------------------
+    curl -fsSL https://gitlab.freedesktop.org/libdecor/libdecor/-/raw/0.2.2/src/libdecor.h | sha256sum
+        -> bb85696fea29eea7f7c78cdddacbc02e6234a0ac94f5d331e7f36eedb5f52cfa
+================================================================================

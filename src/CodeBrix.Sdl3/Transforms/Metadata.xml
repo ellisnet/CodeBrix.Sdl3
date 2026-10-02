@@ -1,0 +1,27 @@
+<metadata>
+	<remove-node
+        path="/api/package[@name='org.libsdl.app']/class[@name='SDLActivity']/field[@name='mClipboardHandler']"/>
+	<remove-node
+        path="/api/package[@name='org.libsdl.app']/class[@name='SDLActivity']/field[@name='mMotionListener']"/>
+	<remove-node
+        path="/api/package[@name='org.libsdl.app']/class[@name='SDLActivity']/field[@name='mTextEdit']"/>
+	<remove-node
+        path="/api/package[@name='org.libsdl.app']/class[@name='SDLActivity']/method[@name='getMotionListener' and count(parameter)=0]"/>
+	<remove-node
+        path="/api/package[@name='org.libsdl.app']/class[@name='SDLControllerManager']/field[@name='mHapticHandler']"/>
+	<remove-node
+        path="/api/package[@name='org.libsdl.app']/class[@name='SDLControllerManager']/field[@name='mJoystickHandler']"/>
+    <remove-node
+        path="/api/package[@name='org.libsdl.app']/class[@name='SDLControllerManager']/field[@name='mDeviceListener']"/>
+
+    <!-- SDLSurface implements View.IOnApplyWindowInsetsListener, whose C# member takes and returns
+         non-null references. Without these the generated override is nullable and the compiler
+         reports CS8766 on the android target (added for CodeBrix; the Java method never returns
+         null - it forwards the insets it was given). -->
+    <attr path="/api/package[@name='org.libsdl.app']/class[@name='SDLSurface']/method[@name='onApplyWindowInsets' and count(parameter)=2]"
+          name="return-not-null">true</attr>
+    <attr path="/api/package[@name='org.libsdl.app']/class[@name='SDLSurface']/method[@name='onApplyWindowInsets' and count(parameter)=2]/parameter[@name='p0']"
+          name="not-null">true</attr>
+    <attr path="/api/package[@name='org.libsdl.app']/class[@name='SDLSurface']/method[@name='onApplyWindowInsets' and count(parameter)=2]/parameter[@name='p1']"
+          name="not-null">true</attr>
+</metadata>

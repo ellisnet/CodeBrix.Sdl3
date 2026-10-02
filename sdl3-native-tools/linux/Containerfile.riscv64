@@ -1,0 +1,110 @@
+# =============================================================================================
+# Containerfile.riscv64 - the SDL3 build machine for linux-riscv64
+# =============================================================================================
+#
+# WHAT THIS IS, AND WHY IT IS A SEPARATE STEP
+#   The rule this folder exists for says the LIBRARY BUILD may not reach outside this
+#   repository. Tools installed on a build machine are the one allowed exception - and this
+#   file IS that installation, written down and version-pinned: it takes the digest-pinned
+#   manylinux base image (Rocky Linux 10, gcc 14, glibc 2.39) and adds cmake, ninja, and the -devel
+#   HEADER packages SDL needs at compile time to enable its X11 / Wayland / audio / input
+#   backends. Nothing else.
+#
+#   Building this image is the ONLY step that uses the network. The library build afterwards
+#   runs with `--network none` and cannot reach anything even if it wanted to.
+#
+#   build.sh builds this image the first time it is needed and reuses it after that.
+#   To rebuild deliberately:   FORCE_IMAGE_REBUILD=1 ./build.sh riscv64
+#
+# WHY HEADERS AND NOT LIBRARIES. SDL is configured with SDL_DEPS_SHARED=ON, so it dlopen()s
+# libX11, libwayland-client, libasound, libpulse, libpipewire, libudev, libdbus and the rest at
+# RUN time on the user's machine, and links none of them. The -devel packages are here only so
+# CMake finds the headers (and the sonames to dlopen) and switches each backend ON; the gate in
+# container-build.sh then proves the shipped .so needs nothing beyond glibc.
+#
+# REQUIRED vs OPTIONAL (lists in pins.env). A missing REQUIRED package fails this image build.
+# OPTIONAL packages are installed when this image's repositories carry them; which ones were
+# found is written to /usr/local/share/codebrix-sdl3-build/packages.txt and copied into every
+# BUILD-INFO.txt, so a backend that is absent on this architecture is recorded, not silent.
+#
+# EVERY VERSION HERE COMES FROM pins.env. The defaults below exist only so a hand-run
+# `podman build -f Containerfile.riscv64 .` still works; build.sh always passes --build-arg.
+# =============================================================================================
+
+ARG BASE_IMAGE=quay.io/pypa/manylinux_2_39_riscv64@sha256:04b3acc69a6cebb10ac1252587d202acce6445d91c783d3f92229bb2b2483069
+FROM ${BASE_IMAGE}
+
+ARG CMAKE_VERSION=4.4.3
+ARG NINJA_VERSION=1.13.2
+ARG PYTHON_IN_IMAGE=/opt/python/cp313-cp313/bin/python
+ARG SDL_DEVEL_REQUIRED="libX11-devel libXext-devel libXrandr-devel libXcursor-devel libXi-devel libXfixes-devel libxkbcommon-devel wayland-devel mesa-libGL-devel mesa-libEGL-devel alsa-lib-devel pulseaudio-libs-devel dbus-devel systemd-devel"
+ARG SDL_DEVEL_OPTIONAL="libXScrnSaver-devel libXtst-devel wayland-protocols-devel libdecor-devel mesa-libgbm-devel libdrm-devel pipewire-devel ibus-devel libusb1-devel libusbx-devel jack-audio-connection-kit-devel pipewire-jack-audio-connection-kit-devel sndio-devel fribidi-devel libthai-devel liburing-devel"
+
+LABEL org.opencontainers.image.title="codebrix-sdl3-build-riscv64"
+LABEL org.opencontainers.image.description="SDL3 native build machine: quay.io/pypa/manylinux_2_39_riscv64 + cmake + ninja + SDL backend headers"
+LABEL org.opencontainers.image.source="CodeBrix.Sdl3/sdl3-native-tools/linux/Containerfile.riscv64"
+
+# ---------------------------------------------------------------------------------------------
+# 1. Distro packages: file and xz for the gate, then the SDL backend headers.
+#    REQUIRED in one transaction (dnf fails on any missing name). OPTIONAL in a second one with
+#    strict=0, which makes dnf skip names this image's repositories do not carry instead of
+#    failing. Then each name is looked up with rpm --whatprovides - which also catches a
+#    package that is present under a different name (EL8's libusbx-devel provides
+#    libusb1-devel, for example) - and the result is written down.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    command -v dnf > /dev/null 2>&1 || { echo "ERROR: no dnf in this image." >&2; exit 1; }; \
+    dnf install -y --setopt=install_weak_deps=False file xz patch pkgconf-pkg-config ${SDL_DEVEL_REQUIRED}; \
+    dnf install -y --setopt=install_weak_deps=False --setopt=strict=0 ${SDL_DEVEL_OPTIONAL} || true; \
+    dnf clean all; \
+    mkdir -p /usr/local/share/codebrix-sdl3-build; \
+    out=/usr/local/share/codebrix-sdl3-build/packages.txt; \
+    : > "$out"; \
+    for p in ${SDL_DEVEL_REQUIRED}; do \
+        printf '%-48s %-9s %s\n' "$p" required "$(rpm -q --whatprovides "$p" --qf '%{NAME}-%{VERSION}-%{RELEASE}\n' | sed -n 1p)" >> "$out"; \
+    done; \
+    for p in ${SDL_DEVEL_OPTIONAL}; do \
+        if r="$(rpm -q --whatprovides "$p" --qf '%{NAME}-%{VERSION}-%{RELEASE}\n' 2>/dev/null | sed -n 1p)"; then \
+            printf '%-48s %-9s %s\n' "$p" optional "$r" >> "$out"; \
+        else \
+            printf '%-48s %-9s %s\n' "$p" optional "NOT AVAILABLE in this image's repositories" >> "$out"; \
+        fi; \
+    done; \
+    cat "$out"
+
+# ---------------------------------------------------------------------------------------------
+# 2. cmake + ninja, at the pinned versions, from the image's own CPython.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    "${PYTHON_IN_IMAGE}" -m pip install --no-cache-dir "cmake==${CMAKE_VERSION}" "ninja==${NINJA_VERSION}"; \
+    ln -sf "$(dirname "${PYTHON_IN_IMAGE}")/cmake" /usr/local/bin/cmake; \
+    ln -sf "$(dirname "${PYTHON_IN_IMAGE}")/ninja" /usr/local/bin/ninja
+
+# ---------------------------------------------------------------------------------------------
+# 3. Prove the toolchain. A missing or too-old tool fails the IMAGE build, here, where the
+#    message is obvious - not ten minutes into a library build. The probe compiles and RUNS a
+#    C11 program that includes the X11 and Wayland client headers, so a broken header install
+#    shows up now.
+#    This base is Rocky Linux 10 (riscv64 manylinux exists in no older form), whose repositories
+#    are baseos / appstream / crb / extras - no EPEL - so some OPTIONAL names may be missing
+#    here that the AlmaLinux 8 images have, and vice versa. packages.txt says which.
+#    ON AN x86_64 HOST this image builds and runs under qemu-user emulation, which is slow.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    echo "=== toolchain in codebrix-sdl3-build-riscv64 ==="; \
+    grep -m1 PRETTY_NAME /etc/os-release; \
+    uname -m; \
+    cc --version | head -1; \
+    ld --version | head -1; \
+    ldd --version | head -1; \
+    cmake --version | head -1; \
+    ninja --version; \
+    for m in x11 wayland-client xkbcommon egl alsa libpulse dbus-1 libudev; do \
+        printf '  pkg-config %-16s %s\n' "$m" "$(pkg-config --modversion "$m")"; \
+    done; \
+    printf '#include <X11/Xlib.h>\n#include <wayland-client.h>\n#include <stdio.h>\nint main(void){ printf("c11 + X11 + wayland headers: %%ld\\n", (long)__STDC_VERSION__); return 0; }\n' > /tmp/probe.c; \
+    cc -std=c11 -o /tmp/probe /tmp/probe.c; \
+    /tmp/probe; \
+    echo "toolchain: ok"
+
+WORKDIR /work

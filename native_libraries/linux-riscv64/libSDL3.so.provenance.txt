@@ -1,0 +1,83 @@
+libSDL3.so -- Linux riscv64 (linux-riscv64)
+================================================================================
+This binary was BUILT HERE, from the SDL source snapshot vendored in this
+repository, by:
+
+    sdl3-native-tools/linux/build.sh riscv64   (-> container-build.sh)
+
+inside a digest-pinned manylinux container with the network DISABLED. Nothing
+was downloaded; the build reaches nothing outside this repository. Re-running
+that script reproduces this binary (linux-x64 was rebuilt from scratch and came
+out byte-identical; see sdl3-native-tools/BUILD-PROVENANCE.txt).
+
+SDL version       : 3.5.0 (development snapshot - NOT a tagged SDL release)
+SDL commit        : a8591d943b7079b17fdd018dc04ec9c71dc94ae4 ("Fix #15985", 2026-07-19)
+                    the same commit ppy/SDL3-CS 2026.722.0's bindings and
+                    binaries were made from
+Source            : sdl3-native-tools/SDL/ (unmodified; see SDL/UPSTREAM.txt)
+Patches applied   : none
+Vendored headers  : none (all headers from the image's own packages)
+libdecor          : the image's own libdecor-devel-0.2.2-5.el10 (dlopen()ed as
+                    libdecor-0.so.0; SDL_LIBDECOR_VERSION 0.2.2)
+SDL_GetRevision() : SDL-3.5.0-a8591d9
+
+Built             : 2026-10-01 22:33:10 UTC
+Build duration    : 456s (wall clock inside the container)
+Build host        : Dell Precision 7770 laptop, LMDE 7, x86_64, podman 5.4.2, under qemu-user emulation
+Network           : DISABLED during this build (interfaces: lo)
+Derived image     : codebrix-sdl3-build-riscv64
+Base image        : quay.io/pypa/manylinux_2_39_riscv64:2026.07.19-1
+                    @sha256:04b3acc69a6cebb10ac1252587d202acce6445d91c783d3f92229bb2b2483069
+Container OS      : Rocky Linux 10.2 (Red Quartz)
+Toolchain         : cc (GCC) 14.3.1 20251022 (Red Hat 14.3.1-4)
+                    GNU ld version 2.41-63.el10
+                    cmake version 4.4.3 (pinned 4.4.3)
+                    ninja 1.13.2.git.kitware.jobserver-pipe-1 (pinned 1.13.2)
+CMake options     : -G Ninja -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF -DSDL_INSTALL=OFF -DSDL_DEPS_SHARED=ON -DSDL_RPATH=OFF
+                    -DSDL_REVISION=SDL-3.5.0-a8591d9
+                    arch options: -DSDL_X11_XSCRNSAVER=OFF
+                    (-DSDL_X11_XSCRNSAVER=OFF: RHEL 10 / Rocky 10 has no
+                    libXScrnSaver-devel; SDL_DisableScreenSaver() on X11 then
+                    relies on the D-Bus screensaver inhibit)
+                    CMAKE_C_FLAGS="-g -ffile-prefix-map=/tmp/codebrix-sdl3-src=SDL -ffile-prefix-map=/tmp/codebrix-sdl3-build=build"
+                    CMAKE_SHARED_LINKER_FLAGS="-Wl,--build-id=sha1"
+                    then strip --strip-unneeded
+
+Backends enabled (SDL's CMake summary; "(dynamic)" = dlopen()ed at run time):
+                    Video drivers: dummy kmsdrm(dynamic) offscreen wayland(dynamic) x11(dynamic)
+                    X11 libraries: xcursor xdbe xfixes xinput2 xrandr xshape xsync xtest
+                    Render drivers: gpu ogl ogl_es ogl_es2 vulkan
+                    GPU drivers: openxr vulkan
+                    Audio drivers: alsa(dynamic) disk dummy jack(dynamic) pipewire(dynamic) pulseaudio(dynamic)
+                    Joystick drivers: hidapi linux virtual
+                    Camera drivers: dummy pipewire(dynamic) v4l2
+Drivers reported at run time by the smoke test:
+                    video drivers    : wayland x11 kmsdrm offscreen dummy evdev
+                    audio drivers    : pipewire pulseaudio alsa jack disk dummy
+                    render drivers   : opengl opengles2 opengles vulkan gpu software
+
+Architecture      : ELF64, RISC-V
+SONAME            : libSDL3.so.0   (shipped under the unversioned name libSDL3.so,
+                    which DllImport("SDL3") probes)
+Dynamic deps      : libc.so.6 libm.so.6 
+glibc floor       : 2.38 (allowed <= 2.39)
+Build-id (sha1)   : 38ffc84a8bb11b9cabdae4206bd1a4abafd25baa
+
+Output SHA-256    : f47815400f81b6e23c2847a3752d5ccbe40d587aa6db43e7497c757de39d3209
+Output size       : 3297656 bytes
+Unstripped SHA-256: 541664302247713747385050fd174cbec74802284376d41a98f0b0696788922c
+Unstripped size   : 20130024 bytes
+                    (stored in sdl3-native-tools/unstripped/linux-riscv64/libSDL3.so)
+
+Gate              : ELF class/machine, SONAME, no RPATH/RUNPATH/TEXTREL, required
+                    exports, system-only NEEDED, ldd -r clean, glibc floor,
+                    matching build-ids, dlopen smoke test (SDL_GetVersion ==
+                    3005000, dummy-driver Init, window + renderer, draw and
+                    read-back, Quit) - ALL PASSED (the smoke test executed
+                    the library under qemu-user emulation)
+
+Vendored on       : 2026-10-01
+
+LICENSE-SDL3.txt beside this file is SDL's LICENSE.txt, verbatim. SDL is
+licensed under the zlib license, Copyright (C) 1997-2026 Sam Lantinga. See
+THIRD-PARTY-NOTICES.txt in the repository root.
