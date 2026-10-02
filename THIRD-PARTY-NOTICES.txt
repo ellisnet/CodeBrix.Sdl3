@@ -106,9 +106,13 @@ repository.
        Unsafe.IsNullRef(ref MemoryMarshal.GetReference(raw)).
      * FriendlyOverloadGenerator.cs: the generated overloads are emitted into
        the CodeBrix.Sdl3 namespace instead of SDL.
-     * The source generator project references Microsoft.CodeAnalysis.CSharp
-       4.12.0 and Microsoft.CodeAnalysis.Analyzers 3.3.4 (upstream 4.3.0 /
-       3.3.4) and no longer references Microsoft.CodeAnalysis.CSharp.Workspaces.
+     * The source generator was ported from the classic ISourceGenerator +
+       ISyntaxReceiver API to IIncrementalGenerator (UnfriendlyMethodFinder is
+       now a static helper used by the incremental pipeline); its output is
+       unchanged. The generator project references the latest stable
+       Microsoft.CodeAnalysis.CSharp and Microsoft.CodeAnalysis.Analyzers
+       (upstream 4.3.0 / 3.3.4) and no longer references
+       Microsoft.CodeAnalysis.CSharp.Workspaces.
      * generate_bindings.py: paths retargeted to this repository layout (headers
        from sdl3-native-tools/SDL/include, output to
        src/CodeBrix.Sdl3/Bindings/ClangSharp, response files in rsp/);

@@ -1,9 +1,11 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
+// Changes for CodeBrix: no longer an ISyntaxReceiver. The selection logic of OnVisitSyntaxNode is
+// unchanged but split into IsCandidate (the cheap syntactic name check, the SyntaxProvider
+// predicate) and Find (the SyntaxProvider transform, returning one GeneratedMethod or null);
+// grouping by file name moved to FriendlyOverloadGenerator.
 
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -11,10 +13,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace CodeBrix.Sdl3.SourceGeneration; //was previously: SDL.SourceGeneration;
 
-public class UnfriendlyMethodFinder : ISyntaxReceiver
+public static class UnfriendlyMethodFinder
 {
-    public readonly Dictionary<string, List<GeneratedMethod>> Methods = new Dictionary<string, List<GeneratedMethod>>();
-
     private static readonly string[] sdlPrefixes = ["SDL_", "TTF_", "IMG_", "MIX_"];
 
     /// <summary>
@@ -32,45 +32,45 @@ public class UnfriendlyMethodFinder : ISyntaxReceiver
         return false;
     }
 
-    public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
+    private static bool IsUnsafe(MethodDeclarationSyntax method)
+        => method.Identifier.ValueText.StartsWith(Helper.UnsafePrefix, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Syntax-only pre-filter: a method declaration whose name has an SDL prefix or <see cref="Helper.UnsafePrefix"/>.
+    /// </summary>
+    public static bool IsCandidate(SyntaxNode syntaxNode)
+        => syntaxNode is MethodDeclarationSyntax method && (IsMethodFromSDL(method) || IsUnsafe(method));
+
+    /// <summary>
+    /// Returns the method with the changes its friendly overload needs, or <c>null</c> when it needs none.
+    /// </summary>
+    public static GeneratedMethod? Find(MethodDeclarationSyntax method)
     {
-        if (syntaxNode is MethodDeclarationSyntax method)
+        bool isUnsafe = IsUnsafe(method);
+
+        if (!IsMethodFromSDL(method) && !isUnsafe)
+            return null;
+
+        if (method.ParameterList.Parameters.Any(p => p.Identifier.IsKind(SyntaxKind.ArgListKeyword)))
+            return null;
+
+        var changes = Changes.None;
+
+        // if the method is not marked unsafe, the `byte*` is not a string.
+        if (method.ReturnType.IsBytePtr() && isUnsafe)
         {
-            string name = method.Identifier.ValueText;
-            bool isUnsafe = name.StartsWith(Helper.UnsafePrefix, StringComparison.Ordinal);
+            changes |= Changes.ChangeReturnTypeToString | Changes.TrimUnsafeFromName;
 
-            if (!IsMethodFromSDL(method) && !isUnsafe)
-                return;
-
-            if (method.ParameterList.Parameters.Any(p => p.Identifier.IsKind(SyntaxKind.ArgListKeyword)))
-                return;
-
-            var changes = Changes.None;
-
-            // if the method is not marked unsafe, the `byte*` is not a string.
-            if (method.ReturnType.IsBytePtr() && isUnsafe)
-            {
-                changes |= Changes.ChangeReturnTypeToString | Changes.TrimUnsafeFromName;
-
-                if (!method.IsReturnTypeConstCharPtr())
-                    changes |= Changes.FreeReturnedPointer;
-            }
-
-            foreach (var parameter in method.ParameterList.Parameters)
-            {
-                if (parameter.IsTypeConstCharPtr())
-                    changes |= Changes.ChangeParamsToUtf8String;
-            }
-
-            if (changes != Changes.None)
-            {
-                string fileName = Path.GetFileName(method.SyntaxTree.FilePath);
-
-                if (!Methods.TryGetValue(fileName, out var list))
-                    Methods[fileName] = list = [];
-
-                list.Add(new GeneratedMethod(method, changes));
-            }
+            if (!method.IsReturnTypeConstCharPtr())
+                changes |= Changes.FreeReturnedPointer;
         }
+
+        foreach (var parameter in method.ParameterList.Parameters)
+        {
+            if (parameter.IsTypeConstCharPtr())
+                changes |= Changes.ChangeParamsToUtf8String;
+        }
+
+        return changes != Changes.None ? new GeneratedMethod(method, changes) : null;
     }
 }

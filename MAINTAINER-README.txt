@@ -127,12 +127,24 @@ csproj):
     SetTargetFramework="TargetFramework=netstandard2.0" and is NOT packed: it
     runs only while CodeBrix.Sdl3 compiles, and its output is compiled into
     CodeBrix.Sdl3.dll.
-  - Generator package pins: Microsoft.CodeAnalysis.CSharp 4.12.0 +
-    Microsoft.CodeAnalysis.Analyzers 3.3.4 - the newest pair that still builds
-    a classic ISourceGenerator. Analyzers 3.11.0+ bans the non-incremental API
-    (RS1035/RS1042 errors under EnforceExtendedAnalyzerRules) and CSharp
-    4.13.0+ requires Analyzers 3.11.0+. Moving past this pair means porting the
-    generator to IIncrementalGenerator.
+  - Generator packages: Microsoft.CodeAnalysis.CSharp and
+    Microsoft.CodeAnalysis.Analyzers are kept at the LATEST stable pair on
+    nuget.org. The generator is an IIncrementalGenerator (upstream's classic
+    ISourceGenerator + ISyntaxReceiver was ported, because Analyzers 3.11.0+
+    rejects that API with RS1035/RS1042 errors under
+    EnforceExtendedAnalyzerRules), so nothing holds the references back. The
+    one limit: the compiler that runs the generator (the .NET SDK's Roslyn)
+    must be at least the referenced Microsoft.CodeAnalysis.CSharp version, or
+    the build reports CS9057 and the friendly overloads go missing - so bump
+    only to a version the SDK in use already ships. Both references are
+    PrivateAssets="all" and the generator is never packed, so neither it nor
+    Microsoft.CodeAnalysis is ever a dependency of the package.
+  - Changing the generator: its output must stay byte-identical unless the
+    change is meant to alter the bindings. Check by building
+    src/CodeBrix.Sdl3 once per TFM (-f net10.0, -f net10.0-android) with
+    -p:EmitCompilerGeneratedFiles=true
+    -p:CompilerGeneratedFilesOutputPath=<a scratch folder per TFM> before and
+    after the change, and diff the two trees.
 
 The Helper.UnsafePrefix constant ("Unsafe_") in the generator must match
 unsafe_prefix in tools/sdl3_binding_generation/generate_bindings.py: the

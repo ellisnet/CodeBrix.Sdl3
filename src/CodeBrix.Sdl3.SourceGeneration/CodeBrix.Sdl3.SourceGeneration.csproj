@@ -36,19 +36,23 @@
   </PropertyGroup>
 
   <!--
-    Version pins (deliberate - do not "bump to latest" without re-reading this):
-    the generator is a classic ISourceGenerator, kept for fidelity with the upstream
-    generator source. Microsoft.CodeAnalysis.Analyzers 3.11.0 and later ban the
-    non-incremental generator API under EnforceExtendedAnalyzerRules (RS1035/RS1042 as
-    errors), and Microsoft.CodeAnalysis.CSharp 4.13.0 and later require Analyzers 3.11.0
-    or later. So these are the LATEST stable pair that still builds an ISourceGenerator
-    with 0 warnings: CSharp 4.12.0 + Analyzers 3.3.4 (probed against every newer pair on
-    nuget.org, 2026-10-01). A lower Roslyn reference also keeps the generator loadable by
-    older compilers (any compiler at Roslyn 4.12 or later runs it).
+    Package versions: LATEST stable, on purpose. The generator is an IIncrementalGenerator
+    (ported from upstream's classic ISourceGenerator + ISyntaxReceiver, whose API
+    Microsoft.CodeAnalysis.Analyzers 3.11.0+ rejects under EnforceExtendedAnalyzerRules with
+    RS1035/RS1042), so nothing holds these references back any more: keep them at the latest
+    stable Microsoft.CodeAnalysis.CSharp + Microsoft.CodeAnalysis.Analyzers pair on nuget.org.
+    The compiler that runs the generator must be at least the referenced Roslyn version (the
+    .NET SDK's own compiler), otherwise the build reports CS9057 and the friendly overloads are
+    missing; bump these only to versions the SDK in use already ships.
+
+    Compile-time only: the generator runs while CodeBrix.Sdl3 itself compiles and its output is
+    compiled into CodeBrix.Sdl3.dll. It is never packed (IsPackable false, no analyzers/ folder in
+    the CodeBrix.Sdl3 package), and these packages are PrivateAssets="all", so neither the
+    generator nor Microsoft.CodeAnalysis ever becomes a dependency of the package.
   -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>
